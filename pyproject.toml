@@ -4,4 +4,42 @@ version = "0.1.0"
 description = "Notes and books"
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+  "marimo>=0.18.1",
+  "numpy>=2.3.5",
+  "pandas>=2.3.3",
+  "python-dotenv>=1.2.1",
+  "vectorbt>=0.28.1",
+  "basedpyright>=1.34.0",
+  "ruff>=0.14.6",
+  "ccxt>=4.5.22",
+  "scipy>=1.16.3",
+  "polars>=1.35.2",
+  "pyarrow>=22.0.0",
+  "plotly>=6.5.0",
+  "requests>=2.32.0",
+  "databento>=0.68.2",
+  "motheme>=0.2.0",
+  "pre-commit>=4.2.0",
+]
+
+[tool.ruff]
+exclude = ["notes/"]
+
+[tool.ruff.lint]
+select = ["I"]
+
+[tool.ruff.format]
+preview = true
+quote-style = "single"
+indent-style = "space"
+
+[tool.pyright]
+typeCheckingMode = "standard"
+exclude = ["notes/", ".venv/", "data/"]
+
+[tool.marimo.runtime]
+pythonpath = ["."]
+
+[tool.marimo.display]
+custom_css = [".style/theme.css"]
