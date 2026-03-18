@@ -1,0 +1,7 @@
+[project]
+name = "orthanc"
+version = "0.1.0"
+description = "Notes and books"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = []
