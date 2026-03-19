@@ -11,7 +11,7 @@ from typing import Any
 import databento as db
 
 from ..errors import DataFetchError
-from .types import OHLCV_COLUMNS, Schema, SType
+from .types import Schema, SType
 
 logger = logging.getLogger(__name__)
 

@@ -30,5 +30,3 @@ def parse_timestamp(value: str | datetime | int) -> int:
     elif isinstance(value, str):
         dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
         return int(dt.timestamp() * 1000)
-    else:
-        raise TypeError(f'Unsupported timestamp type: {type(value).__name__}')

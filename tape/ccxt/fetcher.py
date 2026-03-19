@@ -55,9 +55,7 @@ def fetch_range(
         return _fetch_forward(
             adapter, symbol, timeframe, gap, initial, config, step_ms, cache_dir
         )
-    return _fetch_backward(
-        adapter, symbol, timeframe, gap, initial, config, step_ms, cache_dir
-    )
+    return _fetch_backward(adapter, symbol, timeframe, gap, initial, config, cache_dir)
 
 
 def _extract_timestamp(record: list | dict) -> int:
@@ -66,7 +64,6 @@ def _extract_timestamp(record: list | dict) -> int:
         return record[0]
     elif isinstance(record, dict):
         return record.get('timestamp', 0)
-    raise TypeError(f'Unsupported record type: {type(record).__name__}')
 
 
 def _fetch_forward(
@@ -147,7 +144,6 @@ def _fetch_backward(
     gap: TimeRange,
     initial: list[list] | list[dict],
     config: DataFeed,
-    step_ms: int,
     cache_dir: Path | None = None,
 ) -> list[list] | list[dict]:
     """Fetch data moving backward in time (bybit-style pagination).
