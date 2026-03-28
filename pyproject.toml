@@ -21,6 +21,8 @@ dependencies = [
   "databento>=0.68.2",
   "motheme>=0.2.0",
   "pre-commit>=4.2.0",
+  "pydantic>=2.12.5",
+  "altair>=6.0.0",
 ]
 
 [tool.ruff]

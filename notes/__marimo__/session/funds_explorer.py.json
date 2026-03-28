@@ -1,0 +1,185 @@
+{
+  "version": "1",
+  "metadata": {
+    "marimo_version": "0.21.1",
+    "script_metadata_hash": null
+  },
+  "cells": [
+    {
+      "id": "Hbol",
+      "code_hash": "1d0db38904205bec4d6f6f6a1f6cec3e",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "MJUe",
+      "code_hash": "8c34865c2a4c5e1f185ba202adbe050f",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "vblA",
+      "code_hash": "8be85ac90bc265edeff9916a652aa1d7",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h1 id=\"prop-firm-survival-simulator\">Prop Firm Survival Simulator</h1>\n<span class=\"paragraph\">Single-run explorer: load market data, run a strategy through VectorBT,\napply prop firm rules day-by-day, and inspect whether the account survives.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "bkHC",
+      "code_hash": "c0567c3380a8f98f295e566e6469772a",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "PKri",
+      "code_hash": "a3b6dfd1c019232caf3c1e17edb4e3f3",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "name 'timeframe' is not defined",
+          "traceback": []
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "<span class=\"codehilite\"><div class=\"highlight\"><pre><span></span><span class=\"gt\">Traceback (most recent call last):</span>\n  File <span class=\"nb\">&quot;/var/folders/s2/mblnwg8n7gd1xhpn1qvx5dc00000gn/T/marimo_33842/__marimo__cell_PKri_.py&quot;</span>, line <span class=\"m\">3</span>, in <span class=\"n\">&lt;module&gt;</span>\n<span class=\"w\">    </span><span class=\"n\">symbols</span><span class=\"o\">=</span><span class=\"n\">symbol</span><span class=\"p\">,</span> <span class=\"n\">timeframe</span><span class=\"o\">=</span><span class=\"n\">timeframe</span><span class=\"p\">,</span> <span class=\"n\">since</span><span class=\"o\">=</span><span class=\"n\">start</span><span class=\"p\">,</span> <span class=\"n\">until</span><span class=\"o\">=</span><span class=\"n\">end</span>\n<span class=\"w\">                              </span><span class=\"pm\">^^^^^^^^^</span>\n<span class=\"gr\">NameError</span>: <span class=\"n\">name &#39;timeframe&#39; is not defined. Did you mean: &#39;timeframes&#39;?</span>\n</pre></div>\n</span>",
+          "mimetype": "application/vnd.marimo+traceback"
+        }
+      ]
+    },
+    {
+      "id": "Xref",
+      "code_hash": "9df6a043ce03cdbc60fafeb651fae162",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "An ancestor raised an exception (NameError): ",
+          "traceback": []
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "SFPL",
+      "code_hash": "5012e9bbf7cab8d8b9ba097b11de8c0a",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "An ancestor raised an exception (NameError): ",
+          "traceback": []
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "BYtC",
+      "code_hash": "2ab547a87caba61a0a34e193986094de",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "An ancestor raised an exception (NameError): ",
+          "traceback": []
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "RGSE",
+      "code_hash": "36173d4962e1c7a082b6c93622094c44",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "An ancestor raised an exception (NameError): ",
+          "traceback": []
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Kclp",
+      "code_hash": "df2e10670622b61263bdcb61382d2136",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "An ancestor raised an exception (NameError): ",
+          "traceback": []
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "emfo",
+      "code_hash": "9691d52f471a01d58cba9b6d7f2b37fe",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "An ancestor raised an exception (NameError): ",
+          "traceback": []
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Hstk",
+      "code_hash": "35280b9bd4252170b2a88fc0e4fbee2b",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "An ancestor raised an exception (NameError): ",
+          "traceback": []
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "nWHF",
+      "code_hash": "cb4b39f8b6554bb5bb04fa8585d3cea5",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "An ancestor raised an exception (NameError): ",
+          "traceback": []
+        }
+      ],
+      "console": []
+    }
+  ]
+}
