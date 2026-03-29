@@ -38,10 +38,8 @@ class SizingMode(str, Enum):
 class StrategyConfig(BaseModel):
     """Configuration for a trading strategy."""
 
-    name: str = 'sma_cross'
-    params: dict[str, float | int | str | bool] = Field(
-        default_factory=lambda: {'fast_window': 10, 'slow_window': 30}
-    )
+    name: str
+    params: dict[str, float | int | str | bool] = Field(default_factory=dict)
     direction: Direction = Direction.LONG_ONLY
 
 
