@@ -6,6 +6,7 @@ the fast SMA crosses below. A classic trend-following approach.
 
 import pandas as pd
 
+from ..config import Direction, StrategyConfig
 from ..registry import Strategy, register_strategy
 
 
@@ -15,16 +16,27 @@ class SmaCross(Strategy):
     Args:
         fast_window: Period for the fast moving average.
         slow_window: Period for the slow moving average.
+        direction: Trading direction (default: long only).
     """
 
     def __init__(
         self,
         fast_window: int | float = 10,
         slow_window: int | float = 30,
+        direction: Direction = Direction.LONG_ONLY,
         **_kwargs: object,
     ) -> None:
         self.fast_window = int(fast_window)
         self.slow_window = int(slow_window)
+        self.direction = direction
+
+    def config(self) -> StrategyConfig:
+        """Return strategy configuration from instance state."""
+        return StrategyConfig(
+            name='sma_cross',
+            params={'fast_window': self.fast_window, 'slow_window': self.slow_window},
+            direction=self.direction,
+        )
 
     def signals(self, df: pd.DataFrame) -> tuple[pd.Series, pd.Series]:  # type: ignore[type-arg]
         """Generate SMA crossover entry/exit signals.

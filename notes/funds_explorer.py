@@ -2,8 +2,8 @@
 
 import marimo
 
-__generated_with = "0.21.1"
-app = marimo.App(width="medium")
+__generated_with = '0.21.1'
+app = marimo.App(width='medium')
 
 
 @app.cell
@@ -49,9 +49,7 @@ def _():
 @app.cell
 def _(end, mo, start, symbol, tape, timeframe):
     handler = tape.CCXTHandler('bybit')
-    df = handler.get_ohlcv(
-        symbols=symbol, timeframe=timeframe, since=start, until=end
-    )
+    df = handler.get_ohlcv(symbols=symbol, timeframe=timeframe, since=start, until=end)
 
     # Drop symbol column — we carry it in config
     if 'symbol' in df.columns:
@@ -72,11 +70,6 @@ def _(df, fast_window, funds, mo, slow_window, strats):
 
     firm_config = funds.generic_single_phase_eval()
     execution_config = strats.ExecutionConfig(init_cash=firm_config.account_size)
-    strategy_config = strats.StrategyConfig(
-        name='sma_cross',
-        params={'fast_window': fast_window.value, 'slow_window': slow_window.value},
-        direction=strats.Direction.LONG_ONLY,
-    )
 
     entries, exits = strategy.signals(df)
 
@@ -85,22 +78,22 @@ def _(df, fast_window, funds, mo, slow_window, strats):
         entries=entries,
         exits=exits,
         execution_config=execution_config,
-        strategy_config=strategy_config,
+        strategy_config=strategy.config(),
     )
 
     mo.md(
         f'VectorBT backtest complete: **{exec_result.trade_count}** trades, '
         f'final value **{exec_result.final_value:,.2f}**'
     )
-    return exec_result, firm_config, strategy_config
+    return exec_result, firm_config, strategy
 
 
 @app.cell
-def _(exec_result, firm_config, funds, strategy_config, symbol, timeframe):
+def _(exec_result, firm_config, funds, strategy, symbol, timeframe):
     sim_result = funds.simulate_account(
         result=exec_result,
         firm_config=firm_config,
-        strategy_name=strategy_config.name,
+        strategy_name=strategy.config().name,
         symbol=symbol.value,
         timeframe=timeframe.value,
     )
@@ -245,5 +238,5 @@ def _(firm_config, mo):
     return
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run()

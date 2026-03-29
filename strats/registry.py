@@ -35,6 +35,19 @@ class Strategy(ABC):
         """
         ...
 
+    @abstractmethod
+    def config(self) -> StrategyConfig:
+        """Return the strategy's own configuration.
+
+        The strategy instance is the single source of truth for its
+        name, parameters, and direction.  This eliminates the need for
+        callers to build a separate StrategyConfig manually.
+
+        Returns:
+            StrategyConfig populated from the instance's current state.
+        """
+        ...
+
 
 # ---------------------------------------------------------------------------
 # Registry
