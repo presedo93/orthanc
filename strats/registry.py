@@ -84,4 +84,5 @@ def build_strategy(config: StrategyConfig) -> Strategy:
         msg = f"Unknown strategy '{config.name}'. Available: {available}"
         raise ValueError(msg)
 
-    return cls(**config.params)
+    kwargs = {**config.params, 'direction': config.direction}
+    return cls(**kwargs)  # type: ignore[misc]
