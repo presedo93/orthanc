@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import vectorbt as vbt
 
-from .config import ExecutionConfig, StrategyConfig
+from .config import Direction, ExecutionConfig
 
 
 @dataclass(frozen=True)
@@ -45,7 +45,7 @@ def run_backtest(
     entries: pd.Series,  # type: ignore[type-arg]
     exits: pd.Series,  # type: ignore[type-arg]
     execution_config: ExecutionConfig,
-    strategy_config: StrategyConfig,
+    direction: Direction = Direction.LONG_ONLY,
 ) -> ExecutionResult:
     """Run a backtest using VectorBT and return structured results.
 
@@ -54,7 +54,7 @@ def run_backtest(
         entries: Boolean series — True where entries fire.
         exits: Boolean series — True where exits fire.
         execution_config: Fees, slippage, initial capital.
-        strategy_config: Direction and strategy parameters.
+        direction: Trading direction (long, short, or both).
 
     Returns:
         ExecutionResult with equity curves, trade data, and summary metrics.
@@ -67,7 +67,7 @@ def run_backtest(
         fees=execution_config.fees,
         fixed_fees=execution_config.fixed_fees,
         slippage=execution_config.slippage,
-        direction=strategy_config.direction.value,
+        direction=direction.value,
         freq='h',  # sensible default; VectorBT infers from index if possible
     )
 

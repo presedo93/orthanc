@@ -78,7 +78,7 @@ def _(df, fast_window, funds, mo, slow_window, strats):
         entries=entries,
         exits=exits,
         execution_config=execution_config,
-        strategy_config=strategy.config(),
+        direction=strategy.config().direction,
     )
 
     mo.md(
