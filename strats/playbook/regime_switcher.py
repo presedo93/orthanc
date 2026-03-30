@@ -12,13 +12,18 @@ Key design principles:
 - Multiple strategies can be active simultaneously
 """
 
-from dataclasses import dataclass
 from enum import Enum
 
 import numpy as np
 import pandas as pd
 
-from ..config import Direction, RegimeConfig, StrategyConfig, WeightAdjustmentConfig
+from ..config import (
+    Direction,
+    RegimeConfig,
+    RegimeSwitcherConfig,
+    StrategyConfig,
+    WeightAdjustmentConfig,
+)
 from ..features import (
     adx,
     atr_ratio,
@@ -36,7 +41,7 @@ from .trend_follow import TrendFollow
 from .volatility_breakout import VolatilityBreakout
 
 # ---------------------------------------------------------------------------
-# Regime types and probabilities
+# Regime types
 # ---------------------------------------------------------------------------
 
 
@@ -50,73 +55,48 @@ class RegimeType(str, Enum):
     LOW_ACTIVITY = 'low_activity'
 
 
-@dataclass(frozen=True)
-class RegimeProbabilities:
-    """Probability distribution over market regimes for a single bar.
-
-    All values in [0, 1] and sum to 1.0.
-    """
-
-    trend_up: float
-    trend_down: float
-    sideways: float
-    high_volatility: float
-    low_activity: float
-
-    def as_dict(self) -> dict[str, float]:
-        """Return probabilities as a regime-keyed dictionary."""
-        return {
-            RegimeType.TREND_UP: self.trend_up,
-            RegimeType.TREND_DOWN: self.trend_down,
-            RegimeType.SIDEWAYS: self.sideways,
-            RegimeType.HIGH_VOLATILITY: self.high_volatility,
-            RegimeType.LOW_ACTIVITY: self.low_activity,
-        }
-
-
 # ---------------------------------------------------------------------------
 # Regime → strategy mapping matrix (from SYSTEM.md §5.2)
 # ---------------------------------------------------------------------------
 
-REGIME_STRATEGY_MATRIX: dict[str, dict[str, float]] = {
-    RegimeType.TREND_UP: {
-        'trend': 1.0,
-        'mean_rev': 0.1,
-        'vol_break': 0.3,
-        'defensive': 0.0,
-    },
-    RegimeType.TREND_DOWN: {
-        'trend': 1.0,
-        'mean_rev': 0.1,
-        'vol_break': 0.3,
-        'defensive': 0.0,
-    },
-    RegimeType.SIDEWAYS: {
-        'trend': 0.2,
-        'mean_rev': 1.0,
-        'vol_break': 0.2,
-        'defensive': 0.1,
-    },
-    RegimeType.HIGH_VOLATILITY: {
-        'trend': 0.3,
-        'mean_rev': 0.2,
-        'vol_break': 1.0,
-        'defensive': 0.2,
-    },
-    RegimeType.LOW_ACTIVITY: {
-        'trend': 0.0,
-        'mean_rev': 0.1,
-        'vol_break': 0.0,
-        'defensive': 1.0,
-    },
-}
-
+#: Strategy keys used throughout the module — order matters for matrix columns.
 STRATEGY_KEYS = ('trend', 'mean_rev', 'vol_break', 'defensive')
 
+#: Mapping matrix as a DataFrame for vectorized weight computation.
+#: Rows = regimes, columns = strategy keys.
+REGIME_STRATEGY_MATRIX = pd.DataFrame(
+    {
+        'trend': [1.0, 1.0, 0.2, 0.3, 0.0],
+        'mean_rev': [0.1, 0.1, 1.0, 0.2, 0.1],
+        'vol_break': [0.3, 0.3, 0.2, 1.0, 0.0],
+        'defensive': [0.0, 0.0, 0.1, 0.2, 1.0],
+    },
+    index=[
+        RegimeType.TREND_UP,
+        RegimeType.TREND_DOWN,
+        RegimeType.SIDEWAYS,
+        RegimeType.HIGH_VOLATILITY,
+        RegimeType.LOW_ACTIVITY,
+    ],
+)
+
 
 # ---------------------------------------------------------------------------
-# Regime detection — pure functions
+# Internal helpers
 # ---------------------------------------------------------------------------
+
+
+def _normalize_rows(df: pd.DataFrame) -> pd.DataFrame:
+    """Normalize each row to sum to 1.0, treating all-zero rows as uniform.
+
+    Args:
+        df: DataFrame with non-negative values.
+
+    Returns:
+        Row-normalized DataFrame.
+    """
+    row_sums = df.sum(axis=1).replace(0.0, 1.0)
+    return df.div(row_sums, axis=0)
 
 
 def _sigmoid(x: pd.Series | float, center: float, scale: float) -> pd.Series | float:  # type: ignore[type-arg]
@@ -131,6 +111,30 @@ def _sigmoid(x: pd.Series | float, center: float, scale: float) -> pd.Series | f
         Values in [0, 1].
     """
     return 1.0 / (1.0 + np.exp(-(x - center) / max(scale, 1e-10)))
+
+
+def _weighted_vote(
+    weights: pd.DataFrame,
+    signals: dict[str, pd.Series],  # type: ignore[type-arg]
+) -> pd.Series:  # type: ignore[type-arg]
+    """Compute weighted vote from strategy weights and boolean signals.
+
+    Args:
+        weights: Strategy weight DataFrame (columns = strategy keys).
+        signals: Dict mapping strategy key to boolean signal Series.
+
+    Returns:
+        Weighted vote Series (float in [0, 1]).
+    """
+    vote = pd.Series(0.0, index=weights.index)
+    for key, signal in signals.items():
+        vote += weights[key] * signal.astype(float)
+    return vote
+
+
+# ---------------------------------------------------------------------------
+# Regime detection — pure functions
+# ---------------------------------------------------------------------------
 
 
 def compute_regime_features(df: pd.DataFrame, cfg: RegimeConfig) -> pd.DataFrame:
@@ -251,12 +255,7 @@ def detect_regime_probabilities(
         index=features.index,
     )
 
-    # Clip negatives, then normalize rows to sum to 1
-    raw = raw.clip(lower=0.0)
-    row_sums = raw.sum(axis=1).replace(0.0, 1.0)
-    normalized = raw.div(row_sums, axis=0)
-
-    return normalized
+    return _normalize_rows(raw.clip(lower=0.0))
 
 
 def smooth_regime_probabilities(
@@ -276,10 +275,7 @@ def smooth_regime_probabilities(
         Smoothed and re-normalized regime probability DataFrame.
     """
     smoothed = regime_probs.ewm(span=span, adjust=False).mean()
-
-    # Re-normalize after smoothing
-    row_sums = smoothed.sum(axis=1).replace(0.0, 1.0)
-    return smoothed.div(row_sums, axis=0)  # type: ignore[return-value]
+    return _normalize_rows(smoothed)  # type: ignore[arg-type]
 
 
 def detect_regime_transition(
@@ -316,18 +312,17 @@ def detect_regime_transition(
 
 def compute_strategy_weights(
     regime_probs: pd.DataFrame,
-    matrix: dict[str, dict[str, float]] | None = None,
+    matrix: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Compute strategy weights from regime probabilities.
 
-    Implements the weight formula from SYSTEM.md §5.3:
-        strategy_weight = sum_over_regimes(regime_prob * mapping_value)
-
-    Then normalizes weights to sum to 1.0 per bar.
+    Implements the weight formula from SYSTEM.md §5.3 as a matrix
+    multiply: ``weights = regime_probs @ matrix``, then normalizes.
 
     Args:
         regime_probs: DataFrame with regime probability columns.
-        matrix: Regime→strategy mapping matrix. Defaults to REGIME_STRATEGY_MATRIX.
+        matrix: Regime→strategy mapping matrix (rows=regimes, cols=strategies).
+            Defaults to REGIME_STRATEGY_MATRIX.
 
     Returns:
         DataFrame with strategy weight columns, rows summing to 1.0.
@@ -335,18 +330,8 @@ def compute_strategy_weights(
     if matrix is None:
         matrix = REGIME_STRATEGY_MATRIX
 
-    weights = pd.DataFrame(0.0, index=regime_probs.index, columns=list(STRATEGY_KEYS))
-
-    for regime_name in regime_probs.columns:
-        regime_prob = regime_probs[regime_name]
-        strategy_map = matrix.get(regime_name, {})
-        for strat_key in STRATEGY_KEYS:
-            mapping_value = strategy_map.get(strat_key, 0.0)
-            weights[strat_key] += regime_prob * mapping_value
-
-    # Normalize
-    row_sums = weights.sum(axis=1).replace(0.0, 1.0)
-    return weights.div(row_sums, axis=0)
+    weights: pd.DataFrame = regime_probs @ matrix  # type: ignore[assignment]
+    return _normalize_rows(weights)
 
 
 def apply_transition_scaling(
@@ -478,18 +463,23 @@ def apply_weight_adjustments(
     Returns:
         Adjusted and re-normalized weight DataFrame.
     """
-    # Multiplicative adjustment: weight *= perf_factor * vol_scale
     adjusted = weights * perf_factors
     adjusted = adjusted.mul(vol_scale, axis=0)
-
-    # Re-normalize
-    row_sums = adjusted.sum(axis=1).replace(0.0, 1.0)
-    return adjusted.div(row_sums, axis=0)
+    return _normalize_rows(adjusted)
 
 
 # ---------------------------------------------------------------------------
 # Regime Switcher — multi-strategy orchestrator
 # ---------------------------------------------------------------------------
+
+#: Default sub-strategy constructors keyed by strategy key.
+#: Used by RegimeSwitcher to build its strategy dict.
+_STRATEGY_CONSTRUCTORS: dict[str, type[Strategy]] = {
+    'trend': TrendFollow,
+    'mean_rev': MeanReversion,
+    'vol_break': VolatilityBreakout,
+    'defensive': Defensive,
+}
 
 
 class RegimeSwitcher(Strategy):
@@ -504,25 +494,22 @@ class RegimeSwitcher(Strategy):
     upgraded to HMM or GMM later without changing the strategy API.
 
     Args:
-        entry_threshold: Minimum weighted vote to trigger entry.
-        exit_threshold: Minimum weighted vote to trigger exit.
-        trend_fast_window: Fast EMA period for trend strategy.
-        trend_slow_window: Slow EMA period for trend strategy.
-        trend_atr_multiplier: ATR multiplier for trend stops.
-        trend_adx_period: ADX period for trend strategy.
-        mean_rev_period: Bollinger Band period for mean reversion.
-        mean_rev_num_std: Std deviations for Bollinger Bands.
-        vol_breakout_compression_period: Compression detection period.
-        vol_breakout_atr_multiplier: ATR multiplier for vol breakout stops.
+        switcher_config: Full switcher configuration. Individual params
+            below override their corresponding config fields when both
+            are provided (for backward compatibility with the registry).
         direction: Trading direction.
-        regime_config: Regime detection configuration.
-        weight_adj_config: Performance and volatility weight adjustment config.
     """
 
     def __init__(
         self,
-        entry_threshold: float = 0.4,
-        exit_threshold: float = 0.3,
+        switcher_config: RegimeSwitcherConfig | None = None,
+        direction: Direction = Direction.LONG_ONLY,
+        *,
+        # Flat overrides for registry compatibility (build_strategy passes
+        # params as kwargs). When switcher_config is provided these are
+        # ignored; when it isn't, they seed a new config.
+        entry_threshold: float | None = None,
+        exit_threshold: float | None = None,
         trend_fast_window: int | float = 10,
         trend_slow_window: int | float = 30,
         trend_atr_multiplier: float = 2.0,
@@ -531,52 +518,69 @@ class RegimeSwitcher(Strategy):
         mean_rev_num_std: float = 2.0,
         vol_breakout_compression_period: int | float = 20,
         vol_breakout_atr_multiplier: float = 1.5,
-        direction: Direction = Direction.LONG_ONLY,
         regime_config: RegimeConfig | None = None,
         weight_adj_config: WeightAdjustmentConfig | None = None,
         **_kwargs: object,
     ) -> None:
-        self.entry_threshold = float(entry_threshold)
-        self.exit_threshold = float(exit_threshold)
-        self.direction = direction
-        self.regime_config = regime_config or RegimeConfig()
-        self.weight_adj_config = weight_adj_config or WeightAdjustmentConfig()
+        # Build config from explicit object or from flat kwargs
+        if switcher_config is not None:
+            cfg = switcher_config
+        else:
+            cfg = RegimeSwitcherConfig(
+                regime=regime_config or RegimeConfig(),
+                weight_adj=weight_adj_config or WeightAdjustmentConfig(),
+                entry_threshold=entry_threshold or 0.4,
+                exit_threshold=exit_threshold or 0.3,
+                trend_fast_window=int(trend_fast_window),
+                trend_slow_window=int(trend_slow_window),
+                trend_atr_multiplier=float(trend_atr_multiplier),
+                trend_adx_period=int(trend_adx_period),
+                mean_rev_period=int(mean_rev_period),
+                mean_rev_num_std=float(mean_rev_num_std),
+                vol_breakout_compression_period=int(vol_breakout_compression_period),
+                vol_breakout_atr_multiplier=float(vol_breakout_atr_multiplier),
+            )
 
-        # Initialize sub-strategies
-        self._trend = TrendFollow(
-            fast_window=int(trend_fast_window),
-            slow_window=int(trend_slow_window),
-            atr_multiplier=float(trend_atr_multiplier),
-            adx_period=int(trend_adx_period),
-            direction=direction,
-        )
-        self._mean_rev = MeanReversion(
-            period=int(mean_rev_period),
-            num_std=float(mean_rev_num_std),
-            direction=direction,
-        )
-        self._vol_break = VolatilityBreakout(
-            compression_period=int(vol_breakout_compression_period),
-            atr_multiplier=float(vol_breakout_atr_multiplier),
-            direction=direction,
-        )
-        self._defensive = Defensive(direction=direction)
+        self._cfg = cfg
+        self.direction = direction
+
+        # Build sub-strategies from config
+        self._strategies: dict[str, Strategy] = {
+            'trend': TrendFollow(
+                fast_window=cfg.trend_fast_window,
+                slow_window=cfg.trend_slow_window,
+                atr_multiplier=cfg.trend_atr_multiplier,
+                adx_period=cfg.trend_adx_period,
+                direction=direction,
+            ),
+            'mean_rev': MeanReversion(
+                period=cfg.mean_rev_period,
+                num_std=cfg.mean_rev_num_std,
+                direction=direction,
+            ),
+            'vol_break': VolatilityBreakout(
+                compression_period=cfg.vol_breakout_compression_period,
+                atr_multiplier=cfg.vol_breakout_atr_multiplier,
+                direction=direction,
+            ),
+            'defensive': Defensive(direction=direction),
+        }
 
     def config(self) -> StrategyConfig:
         """Return strategy configuration from instance state."""
         return StrategyConfig(
             name='regime_switcher',
             params={
-                'entry_threshold': self.entry_threshold,
-                'exit_threshold': self.exit_threshold,
-                'trend_fast_window': self._trend.fast_window,
-                'trend_slow_window': self._trend.slow_window,
-                'trend_atr_multiplier': self._trend.atr_multiplier,
-                'trend_adx_period': self._trend.adx_period,
-                'mean_rev_period': self._mean_rev.period,
-                'mean_rev_num_std': self._mean_rev.num_std,
-                'vol_breakout_compression_period': self._vol_break.compression_period,
-                'vol_breakout_atr_multiplier': self._vol_break.atr_multiplier,
+                'entry_threshold': self._cfg.entry_threshold,
+                'exit_threshold': self._cfg.exit_threshold,
+                'trend_fast_window': self._cfg.trend_fast_window,
+                'trend_slow_window': self._cfg.trend_slow_window,
+                'trend_atr_multiplier': self._cfg.trend_atr_multiplier,
+                'trend_adx_period': self._cfg.trend_adx_period,
+                'mean_rev_period': self._cfg.mean_rev_period,
+                'mean_rev_num_std': self._cfg.mean_rev_num_std,
+                'vol_breakout_compression_period': self._cfg.vol_breakout_compression_period,
+                'vol_breakout_atr_multiplier': self._cfg.vol_breakout_atr_multiplier,
             },
             direction=self.direction,
         )
@@ -593,11 +597,10 @@ class RegimeSwitcher(Strategy):
         Returns:
             Smoothed regime probability DataFrame.
         """
-        features = compute_regime_features(df, self.regime_config)
-        raw_probs = detect_regime_probabilities(features, self.regime_config)
-        return smooth_regime_probabilities(
-            raw_probs, self.regime_config.regime_ema_span
-        )
+        regime_cfg = self._cfg.regime
+        features = compute_regime_features(df, regime_cfg)
+        raw_probs = detect_regime_probabilities(features, regime_cfg)
+        return smooth_regime_probabilities(raw_probs, regime_cfg.regime_ema_span)
 
     def signals(self, df: pd.DataFrame) -> tuple[pd.Series, pd.Series]:  # type: ignore[type-arg]
         """Generate adaptive multi-strategy entry/exit signals.
@@ -608,8 +611,7 @@ class RegimeSwitcher(Strategy):
         3. Apply transition scaling
         4. Run all sub-strategies independently
         5. Apply performance + volatility weight adjustments (§5.5)
-        6. Combine signals using weighted voting
-        7. Apply thresholds for final entry/exit
+        6. Combine signals via weighted voting + thresholds
 
         Args:
             df: OHLCV DataFrame with 'open', 'high', 'low', 'close', 'volume'.
@@ -617,8 +619,6 @@ class RegimeSwitcher(Strategy):
         Returns:
             Tuple of (entries, exits) as boolean Series.
         """
-        cfg = self.regime_config
-        wa_cfg = self.weight_adj_config
         close: pd.Series = df['close']  # type: ignore[assignment]
 
         # 1. Detect regime
@@ -629,44 +629,33 @@ class RegimeSwitcher(Strategy):
 
         # 3. Apply transition scaling
         is_transition = detect_regime_transition(regime_probs)
-        weights = apply_transition_scaling(weights, is_transition, cfg.transition_decay)
+        weights = apply_transition_scaling(
+            weights, is_transition, self._cfg.regime.transition_decay
+        )
 
         # 4. Run all sub-strategies independently
-        trend_entries, trend_exits = self._trend.signals(df)
-        mr_entries, mr_exits = self._mean_rev.signals(df)
-        vb_entries, vb_exits = self._vol_break.signals(df)
-        def_entries, def_exits = self._defensive.signals(df)
+        all_signals = {
+            key: strat.signals(df) for key, strat in self._strategies.items()
+        }
+        entry_signals: dict[str, pd.Series] = {  # type: ignore[type-arg]
+            k: sigs[0] for k, sigs in all_signals.items()
+        }
+        exit_signals: dict[str, pd.Series] = {  # type: ignore[type-arg]
+            k: sigs[1] for k, sigs in all_signals.items()
+        }
 
         # 5. Performance + volatility weight adjustments (SYSTEM.md §5.5)
-        strategy_entries: dict[str, pd.Series] = {  # type: ignore[type-arg]
-            'trend': trend_entries,
-            'mean_rev': mr_entries,
-            'vol_break': vb_entries,
-            'defensive': def_entries,
-        }
-        perf_factors = compute_performance_factors(close, strategy_entries, wa_cfg)
+        wa_cfg = self._cfg.weight_adj
+        perf_factors = compute_performance_factors(close, entry_signals, wa_cfg)
         vol_scale = compute_volatility_scaling(close, wa_cfg)
         weights = apply_weight_adjustments(weights, perf_factors, vol_scale)
 
-        # 6. Weighted voting for entries
-        entry_vote = (
-            weights['trend'] * trend_entries.astype(float)
-            + weights['mean_rev'] * mr_entries.astype(float)
-            + weights['vol_break'] * vb_entries.astype(float)
-            + weights['defensive'] * def_entries.astype(float)
-        )
+        # 6. Weighted voting + thresholds
+        entry_vote = _weighted_vote(weights, entry_signals)
+        exit_vote = _weighted_vote(weights, exit_signals)
 
-        # 7. Weighted voting for exits
-        exit_vote = (
-            weights['trend'] * trend_exits.astype(float)
-            + weights['mean_rev'] * mr_exits.astype(float)
-            + weights['vol_break'] * vb_exits.astype(float)
-            + weights['defensive'] * def_exits.astype(float)
-        )
-
-        # 8. Apply thresholds
-        entries = (entry_vote >= self.entry_threshold).fillna(False).astype(bool)
-        exits = (exit_vote >= self.exit_threshold).fillna(False).astype(bool)
+        entries = (entry_vote >= self._cfg.entry_threshold).fillna(False).astype(bool)
+        exits = (exit_vote >= self._cfg.exit_threshold).fillna(False).astype(bool)
 
         return entries, exits
 
