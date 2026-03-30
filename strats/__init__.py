@@ -12,6 +12,7 @@ from .config import (
     RegimeSwitcherConfig,
     SizingMode,
     StrategyConfig,
+    WeightAdjustmentConfig,
 )
 from .execution import ExecutionResult, run_backtest
 from .playbook import (
@@ -32,6 +33,7 @@ __all__ = [
     'RegimeSwitcherConfig',
     'SizingMode',
     'StrategyConfig',
+    'WeightAdjustmentConfig',
     # Execution
     'ExecutionResult',
     'run_backtest',

@@ -18,7 +18,7 @@ from enum import Enum
 import numpy as np
 import pandas as pd
 
-from ..config import Direction, RegimeConfig, RegimeSwitcherConfig, StrategyConfig
+from ..config import Direction, RegimeConfig, StrategyConfig, WeightAdjustmentConfig
 from ..features import (
     adx,
     atr_ratio,
@@ -26,6 +26,7 @@ from ..features import (
     ema_slope,
     higher_highs_lower_lows,
     range_compression,
+    realized_volatility,
     volume_ratio,
 )
 from ..registry import Strategy, register_strategy
@@ -372,6 +373,121 @@ def apply_transition_scaling(
 
 
 # ---------------------------------------------------------------------------
+# Performance & volatility weight adjustments (SYSTEM.md §5.5)
+# ---------------------------------------------------------------------------
+
+
+def compute_performance_factors(
+    close: pd.Series,  # type: ignore[type-arg]
+    strategy_entries: dict[str, pd.Series],  # type: ignore[type-arg]
+    cfg: WeightAdjustmentConfig,
+) -> pd.DataFrame:
+    """Compute per-strategy performance factors from rolling hit rate.
+
+    For each strategy, measures what fraction of entry signals were
+    directionally correct: was close higher ``cfg.perf_horizon`` bars
+    after the entry signal? The hit rate is converted to a multiplicative
+    factor in [cfg.floor, cfg.ceiling].
+
+    A hit rate of 0.5 (coin flip) maps to factor 1.0 (neutral).
+    Above 0.5 scales up; below 0.5 scales down.
+
+    Args:
+        close: Close price series.
+        strategy_entries: Dict mapping strategy key to boolean entry Series.
+        cfg: Weight adjustment configuration.
+
+    Returns:
+        DataFrame with strategy keys as columns, performance factors
+        as values, clamped to [cfg.floor, cfg.ceiling].
+    """
+    forward_return = close.shift(-cfg.perf_horizon) - close
+    factors = pd.DataFrame(index=close.index, columns=list(strategy_entries.keys()))
+
+    for key, entries in strategy_entries.items():
+        # Mark directionally correct signals (price went up after entry)
+        hits = (forward_return > 0).astype(float)
+        # Only count bars where this strategy actually signaled
+        signal_float = entries.astype(float)
+        # Rolling hit rate: sum of correct signals / sum of all signals
+        rolling_hits = (
+            (signal_float * hits).rolling(window=cfg.perf_lookback, min_periods=1).sum()
+        )
+        rolling_signals = signal_float.rolling(
+            window=cfg.perf_lookback, min_periods=1
+        ).sum()
+
+        hit_rate = rolling_hits / rolling_signals.where(  # type: ignore[assignment]
+            rolling_signals != 0.0, np.nan
+        )
+        # Not enough signals → neutral factor
+        hit_rate = hit_rate.where(rolling_signals >= cfg.perf_min_signals, 0.5)
+        hit_rate = hit_rate.fillna(0.5)
+
+        # Map hit rate to factor: 0.5 → 1.0, 0.0 → floor, 1.0 → ceiling
+        # Linear mapping: factor = floor + (ceiling - floor) * hit_rate
+        factor = cfg.floor + (cfg.ceiling - cfg.floor) * hit_rate
+        factors[key] = factor.clip(cfg.floor, cfg.ceiling)
+
+    return factors.astype(float)
+
+
+def compute_volatility_scaling(
+    close: pd.Series,  # type: ignore[type-arg]
+    cfg: WeightAdjustmentConfig,
+) -> pd.Series:  # type: ignore[type-arg]
+    """Compute a scalar volatility adjustment factor per bar.
+
+    Compares current realized volatility to a target level.
+    When vol is above target → scale down (reduce exposure).
+    When vol is below target → scale up (increase exposure).
+
+    The factor is ``target / current_vol``, clamped to
+    [cfg.floor, cfg.ceiling].
+
+    Args:
+        close: Close price series.
+        cfg: Weight adjustment configuration.
+
+    Returns:
+        Series of volatility scaling factors, clamped to
+        [cfg.floor, cfg.ceiling].
+    """
+    current_vol = realized_volatility(close, cfg.vol_period)
+    # Avoid division by zero — treat near-zero vol as target (neutral)
+    safe_vol = current_vol.replace(0.0, cfg.vol_target).clip(lower=1e-10)
+    factor = cfg.vol_target / safe_vol
+    return factor.clip(cfg.floor, cfg.ceiling)
+
+
+def apply_weight_adjustments(
+    weights: pd.DataFrame,
+    perf_factors: pd.DataFrame,
+    vol_scale: pd.Series,  # type: ignore[type-arg]
+) -> pd.DataFrame:
+    """Apply performance and volatility adjustments to strategy weights.
+
+    Multiplies each strategy weight by its performance factor and the
+    global volatility scaling. Re-normalizes so weights sum to 1.0.
+
+    Args:
+        weights: Strategy weight DataFrame (columns = strategy keys).
+        perf_factors: Per-strategy performance factors DataFrame.
+        vol_scale: Scalar volatility adjustment Series.
+
+    Returns:
+        Adjusted and re-normalized weight DataFrame.
+    """
+    # Multiplicative adjustment: weight *= perf_factor * vol_scale
+    adjusted = weights * perf_factors
+    adjusted = adjusted.mul(vol_scale, axis=0)
+
+    # Re-normalize
+    row_sums = adjusted.sum(axis=1).replace(0.0, 1.0)
+    return adjusted.div(row_sums, axis=0)
+
+
+# ---------------------------------------------------------------------------
 # Regime Switcher — multi-strategy orchestrator
 # ---------------------------------------------------------------------------
 
@@ -399,6 +515,8 @@ class RegimeSwitcher(Strategy):
         vol_breakout_compression_period: Compression detection period.
         vol_breakout_atr_multiplier: ATR multiplier for vol breakout stops.
         direction: Trading direction.
+        regime_config: Regime detection configuration.
+        weight_adj_config: Performance and volatility weight adjustment config.
     """
 
     def __init__(
@@ -415,12 +533,14 @@ class RegimeSwitcher(Strategy):
         vol_breakout_atr_multiplier: float = 1.5,
         direction: Direction = Direction.LONG_ONLY,
         regime_config: RegimeConfig | None = None,
+        weight_adj_config: WeightAdjustmentConfig | None = None,
         **_kwargs: object,
     ) -> None:
         self.entry_threshold = float(entry_threshold)
         self.exit_threshold = float(exit_threshold)
         self.direction = direction
         self.regime_config = regime_config or RegimeConfig()
+        self.weight_adj_config = weight_adj_config or WeightAdjustmentConfig()
 
         # Initialize sub-strategies
         self._trend = TrendFollow(
@@ -483,11 +603,11 @@ class RegimeSwitcher(Strategy):
         """Generate adaptive multi-strategy entry/exit signals.
 
         Full decision flow:
-        1. Compute market features
-        2. Detect regime probabilities (smoothed)
-        3. Compute strategy weights from regime
-        4. Apply transition scaling
-        5. Run all sub-strategies independently
+        1. Detect regime probabilities (smoothed)
+        2. Compute strategy weights from regime
+        3. Apply transition scaling
+        4. Run all sub-strategies independently
+        5. Apply performance + volatility weight adjustments (§5.5)
         6. Combine signals using weighted voting
         7. Apply thresholds for final entry/exit
 
@@ -498,6 +618,8 @@ class RegimeSwitcher(Strategy):
             Tuple of (entries, exits) as boolean Series.
         """
         cfg = self.regime_config
+        wa_cfg = self.weight_adj_config
+        close: pd.Series = df['close']  # type: ignore[assignment]
 
         # 1. Detect regime
         regime_probs = self.detect_regime(df)
@@ -515,7 +637,18 @@ class RegimeSwitcher(Strategy):
         vb_entries, vb_exits = self._vol_break.signals(df)
         def_entries, def_exits = self._defensive.signals(df)
 
-        # 5. Weighted voting for entries
+        # 5. Performance + volatility weight adjustments (SYSTEM.md §5.5)
+        strategy_entries: dict[str, pd.Series] = {  # type: ignore[type-arg]
+            'trend': trend_entries,
+            'mean_rev': mr_entries,
+            'vol_break': vb_entries,
+            'defensive': def_entries,
+        }
+        perf_factors = compute_performance_factors(close, strategy_entries, wa_cfg)
+        vol_scale = compute_volatility_scaling(close, wa_cfg)
+        weights = apply_weight_adjustments(weights, perf_factors, vol_scale)
+
+        # 6. Weighted voting for entries
         entry_vote = (
             weights['trend'] * trend_entries.astype(float)
             + weights['mean_rev'] * mr_entries.astype(float)
@@ -523,7 +656,7 @@ class RegimeSwitcher(Strategy):
             + weights['defensive'] * def_entries.astype(float)
         )
 
-        # 6. Weighted voting for exits
+        # 7. Weighted voting for exits
         exit_vote = (
             weights['trend'] * trend_exits.astype(float)
             + weights['mean_rev'] * mr_exits.astype(float)
@@ -531,7 +664,7 @@ class RegimeSwitcher(Strategy):
             + weights['defensive'] * def_exits.astype(float)
         )
 
-        # 7. Apply thresholds
+        # 8. Apply thresholds
         entries = (entry_vote >= self.entry_threshold).fillna(False).astype(bool)
         exits = (exit_vote >= self.exit_threshold).fillna(False).astype(bool)
 

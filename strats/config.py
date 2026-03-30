@@ -97,6 +97,35 @@ class RegimeConfig(BaseModel):
     transition_decay: float = 0.6
 
 
+class WeightAdjustmentConfig(BaseModel):
+    """Controls performance-based and volatility-based weight modifiers.
+
+    Both adjustments are multiplicative factors applied to strategy
+    weights after regime-based computation. All factors are clamped
+    to [floor, ceiling] to prevent extreme swings.
+
+    Performance adjustment: measures rolling hit rate of each strategy's
+    entry signals (was the move directionally correct N bars later?)
+    and scales weights up/down accordingly.
+
+    Volatility scaling: compares current realized volatility to a target
+    level. High vol → scale down exposure; low vol → scale up.
+    """
+
+    # Performance tracking
+    perf_lookback: int = 50
+    perf_min_signals: int = 5
+    perf_horizon: int = 5
+
+    # Volatility scaling
+    vol_target: float = 0.02
+    vol_period: int = 20
+
+    # Shared clamps
+    floor: float = 0.3
+    ceiling: float = 1.5
+
+
 class RegimeSwitcherConfig(BaseModel):
     """Configuration for the regime-based multi-strategy switcher.
 
@@ -105,6 +134,7 @@ class RegimeSwitcherConfig(BaseModel):
     """
 
     regime: RegimeConfig = Field(default_factory=RegimeConfig)
+    weight_adj: WeightAdjustmentConfig = Field(default_factory=WeightAdjustmentConfig)
 
     # Signal combination threshold — minimum weighted vote to trigger entry
     entry_threshold: float = 0.4
