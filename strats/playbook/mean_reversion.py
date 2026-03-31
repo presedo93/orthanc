@@ -54,7 +54,7 @@ class MeanReversion(Strategy):
             direction=self.direction,
         )
 
-    def signals(self, df: pd.DataFrame) -> tuple[pd.Series, pd.Series]:  # type: ignore[type-arg]
+    def signals(self, df: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
         """Generate mean reversion entry/exit signals.
 
         Entry: price touches lower band with z-score confirmation.
