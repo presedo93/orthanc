@@ -26,7 +26,7 @@ dependencies = [
 ]
 
 [tool.ruff]
-exclude = ["notes/"]
+exclude = ["council/"]
 
 [tool.ruff.lint]
 select = ["I"]
@@ -38,7 +38,7 @@ indent-style = "space"
 
 [tool.pyright]
 typeCheckingMode = "standard"
-exclude = ["notes/", ".venv/", "data/"]
+exclude = ["council/", ".venv/", "archives/"]
 
 [tool.marimo.runtime]
 pythonpath = ["."]
