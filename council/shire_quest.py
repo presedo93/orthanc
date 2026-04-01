@@ -17,8 +17,8 @@ def _():
 def _():
     import pandas as pd
 
-    import mordor
     import istari
+    import mordor
     import palantir
 
     return mordor, pd, istari, palantir
@@ -48,7 +48,7 @@ def _():
 
 @app.cell
 def _(end, mo, start, symbol, palantir, timeframe):
-    handler = palantir.CCXTHandler('bybit')
+    handler = palantir.ShireKeeper('bybit')
     df = handler.get_ohlcv(symbols=symbol, timeframe=timeframe, since=start, until=end)
 
     # Drop symbol column — we carry it in config
@@ -69,7 +69,7 @@ def _(df, fast_window, mordor, mo, slow_window, istari):
     )
 
     firm_config = mordor.sauron_basic()
-    execution_config = istari.ExecutionConfig(init_cash=firm_config.account_size)
+    execution_config = istari.ForgeConfig(init_cash=firm_config.account_size)
 
     entries, exits = strategy.signals(df)
 

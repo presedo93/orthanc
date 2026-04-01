@@ -22,8 +22,8 @@ Symbol Format: {SYMBOL}.{ROLL_TYPE}.{RANK}
 - RANK: 0 = front month, 1 = second month, etc.
 
 Examples:
-    >>> from palantir import BentoHandler
-    >>> handler = BentoHandler(api_key="db-xxx", dataset="GLBX.MDP3")
+    >>> from palantir import TowerKeeper
+    >>> handler = TowerKeeper(api_key="db-xxx", dataset="GLBX.MDP3")
     >>> df = handler.get_ohlcv(
     ...     symbols="MNQ.v.0",
     ...     schema="ohlcv-1m",
@@ -33,7 +33,7 @@ Examples:
 """
 
 from .adapter import TowerAdapter
-from .handler import BentoHandler
+from .handler import TowerKeeper
 from .types import (
     FEED_MAP,
     FEED_OHLCV_1D,
@@ -51,7 +51,7 @@ from .types import (
 
 __all__ = [
     # Main handler
-    'BentoHandler',
+    'TowerKeeper',
     # Adapter (for advanced use)
     'TowerAdapter',
     # Types

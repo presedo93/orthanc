@@ -33,15 +33,15 @@ from .types import (
 )
 
 
-class CCXTHandler:
-    """Wrapper over ccxt for simplified exchange data access.
+class ShireKeeper:
+    """Technical name: ShireKeeper — wrapper over ccxt for simplified exchange data access.
 
     Encapsulates exchange initialization and provides methods for
     fetching and storing various types of exchange data (OHLCV, open
     interest, funding rates) with intelligent caching.
 
     Examples:
-        >>> handler = CCXTHandler("bybit")
+        >>> handler = ShireKeeper("bybit")
         >>> df = handler.get_ohlcv(
         ...     symbols="BTC/USDT",
         ...     timeframe="1h",
@@ -117,7 +117,7 @@ class CCXTHandler:
             ccxt.ExchangeError: If loading markets fails
 
         Example:
-            >>> handler = CCXTHandler('binance')
+            >>> handler = ShireKeeper('binance')
             >>> markets = handler.markets
             >>> 'BTC/USDT' in markets
             True
@@ -161,7 +161,7 @@ class CCXTHandler:
             DataFrame with datetime index and columns: symbol, open, high, low, close, volume.
 
         Examples:
-            >>> handler = CCXTHandler("binance")
+            >>> handler = ShireKeeper("binance")
             >>> df = handler.get_ohlcv(
             ...     symbols=["BTC/USDT", "ETH/USDT"],
             ...     timeframe="1h",
@@ -197,7 +197,7 @@ class CCXTHandler:
             DataFrame with datetime index and columns: symbol, open, high, low, close, volume.
 
         Examples:
-            >>> handler = CCXTHandler("binance")
+            >>> handler = ShireKeeper("binance")
             >>> df = handler.get_mark_ohlcv(
             ...     symbols=["BTC/USDT:USDT", "ETH/USDT:USDT"],
             ...     timeframe="1h",
@@ -230,7 +230,7 @@ class CCXTHandler:
             DataFrame with datetime index and columns: symbol, openInterestAmount, openInterestValue.
 
         Examples:
-            >>> handler = CCXTHandler("bybit")
+            >>> handler = ShireKeeper("bybit")
             >>> df = handler.get_open_interest(
             ...     symbols="BTC/USDT:USDT",
             ...     timeframe="1h",
@@ -262,7 +262,7 @@ class CCXTHandler:
             DataFrame with datetime index and columns: symbol, fundingRate, fundingTimestamp.
 
         Examples:
-            >>> handler = CCXTHandler("bybit")
+            >>> handler = ShireKeeper("bybit")
             >>> df = handler.get_funding_rate(
             ...     symbols="BTC/USDT:USDT",
             ...     timeframe="8h",
@@ -295,7 +295,7 @@ class CCXTHandler:
             DataFrame with datetime index and columns: symbol, longShortRatio.
 
         Examples:
-            >>> handler = CCXTHandler("binance")
+            >>> handler = ShireKeeper("binance")
             >>> df = handler.get_long_short_ratio(
             ...     symbols="BTC/USDT:USDT",
             ...     timeframe="1h",
@@ -326,7 +326,7 @@ class CCXTHandler:
             DataFrame with datetime index and columns: symbol, id, side, price, amount, cost.
 
         Examples:
-            >>> handler = CCXTHandler("binance")
+            >>> handler = ShireKeeper("binance")
             >>> df = handler.get_trades(
             ...     symbols="BTC/USDT",
             ...     since="2024-01-01T00:00:00Z",

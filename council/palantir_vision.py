@@ -20,8 +20,8 @@ def _():
     import altair as alt
     import pandas as pd
 
-    import mordor
     import istari
+    import mordor
     import palantir
     from istari.playbook.saruman import (
         REGIME_STRATEGY_MATRIX,
@@ -139,7 +139,7 @@ def _(mo):
 
 @app.cell
 def _(mo, os, schema, symbol, palantir):
-    _handler = palantir.BentoHandler(
+    _handler = palantir.TowerKeeper(
         api_key=os.environ['DATABENTO_API_KEY'],
         dataset='GLBX.MDP3',
     )
@@ -535,7 +535,7 @@ def _(mo):
 def _(df, mordor, mo, istari):
     strategy = istari.Saruman(switcher_config=_cfg)
     firm_config = mordor.sauron_basic()
-    execution_config = istari.ExecutionConfig(init_cash=firm_config.account_size)
+    execution_config = istari.ForgeConfig(init_cash=firm_config.account_size)
 
     entries, exits = strategy.signals(df)
 

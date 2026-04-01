@@ -1,6 +1,6 @@
 """DataBento handler for simplified futures data fetching.
 
-This module provides the BentoHandler class for fetching OHLCV data from
+This module provides the TowerKeeper class for fetching OHLCV data from
 DataBento with automatic caching. The cache-first architecture ensures
 that reading cached data NEVER costs API money.
 
@@ -13,7 +13,7 @@ Continuous Contract Roll Types
 The number after the roll code is the rank (0 = front month).
 
 Examples:
-    >>> handler = BentoHandler(api_key="db-xxx", dataset="GLBX.MDP3")
+    >>> handler = TowerKeeper(api_key="db-xxx", dataset="GLBX.MDP3")
     >>> df = handler.get_ohlcv(
     ...     symbols="MNQ.v.0",
     ...     schema="ohlcv-1m",
@@ -50,8 +50,8 @@ from .types import (
 )
 
 
-class BentoHandler:
-    """Handler for DataBento data fetching with intelligent caching.
+class TowerKeeper:
+    """Technical name: BentoHandler — handler for DataBento data fetching with intelligent caching.
 
     Provides a simplified interface for fetching OHLCV data for futures
     with automatic caching. The cache-first architecture ensures:
@@ -61,7 +61,7 @@ class BentoHandler:
     - Data is stored in efficient parquet format
 
     Examples:
-        >>> handler = BentoHandler(api_key="db-xxx", dataset="GLBX.MDP3")
+        >>> handler = TowerKeeper(api_key="db-xxx", dataset="GLBX.MDP3")
         >>> df = handler.get_ohlcv(
         ...     symbols=["MNQ.v.0", "ES.v.0"],
         ...     schema="ohlcv-1m",
@@ -305,7 +305,7 @@ class BentoHandler:
         """Close the adapter."""
         self._adapter.close()
 
-    def __enter__(self) -> 'BentoHandler':
+    def __enter__(self) -> 'TowerKeeper':
         return self
 
     def __exit__(self, *args: object) -> None:

@@ -3,7 +3,7 @@
 Technical name: ccxt/ — CCXT-based exchange data fetching.
 """
 
-from .handler import CCXTHandler
+from .handler import ShireKeeper
 from .types import (
     FEED_FUNDING_RATE,
     FEED_LS_RATIO,
@@ -16,7 +16,7 @@ from .types import (
 )
 
 __all__ = [
-    'CCXTHandler',
+    'ShireKeeper',
     'Exchange',
     'FEED_FUNDING_RATE',
     'FEED_LS_RATIO',
