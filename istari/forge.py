@@ -13,12 +13,12 @@ import numpy as np
 import pandas as pd
 import vectorbt as vbt
 
-from .scrolls import Direction, ExecutionConfig
+from .scrolls import Direction, ForgeConfig
 
 
 @dataclass(frozen=True)
-class ExecutionResult:
-    """Raw output from the VectorBT execution engine.
+class ForgeResult:
+    """Technical name: ExecutionResult — raw output from the VectorBT execution engine.
 
     Contains everything needed to evaluate performance, run prop firm
     simulations, or compute standalone strategy metrics.
@@ -46,9 +46,9 @@ def forge_battle(
     close: pd.Series,  # type: ignore[type-arg]
     entries: pd.Series,  # type: ignore[type-arg]
     exits: pd.Series,  # type: ignore[type-arg]
-    execution_config: ExecutionConfig,
+    execution_config: ForgeConfig,
     direction: Direction = Direction.WESTWARD,
-) -> ExecutionResult:
+) -> ForgeResult:
     """Run a backtest using VectorBT and return structured results.
 
     Technical name: run_backtest — executes VectorBT portfolio simulation.
@@ -61,7 +61,7 @@ def forge_battle(
         direction: Trading direction (westward, eastward, or all roads).
 
     Returns:
-        ExecutionResult with equity curves, trade data, and summary metrics.
+        ForgeResult with equity curves, trade data, and summary metrics.
     """
     pf = vbt.Portfolio.from_signals(
         close,
@@ -85,7 +85,7 @@ def forge_battle(
     win_rate_val = pf.trades.win_rate() if trade_count_val > 0 else 0.0  # type: ignore[attr-defined]
     pf_val = pf.trades.profit_factor() if trade_count_val > 0 else 0.0  # type: ignore[attr-defined]
 
-    return ExecutionResult(
+    return ForgeResult(
         equity_curve=pf.value(),
         cash_curve=pf.cash(),
         returns=pf.returns(),

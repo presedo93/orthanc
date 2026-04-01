@@ -14,7 +14,7 @@ Function mapping:
 
 from dataclasses import dataclass
 
-from .rings import DailyLedgerRow, FailureReason, SimulationResult
+from .rings import DailyChronicle, FailureReason, QuestResult
 
 # ---------------------------------------------------------------------------
 # Single-run metrics
@@ -22,8 +22,8 @@ from .rings import DailyLedgerRow, FailureReason, SimulationResult
 
 
 @dataclass(frozen=True)
-class PerformanceMetrics:
-    """Classical performance metrics for a single simulation."""
+class BattleRecord:
+    """Technical name: PerformanceMetrics — classical performance metrics for a single simulation."""
 
     net_pnl: float
     gross_pnl: float
@@ -42,8 +42,8 @@ class PerformanceMetrics:
 
 
 @dataclass(frozen=True)
-class SurvivalMetrics:
-    """Survival metrics for a single simulation."""
+class FateRecord:
+    """Technical name: SurvivalMetrics — survival metrics for a single simulation."""
 
     survived: bool
     passed_evaluation: bool
@@ -56,7 +56,7 @@ class SurvivalMetrics:
     trading_days: int
 
 
-def read_the_scrolls(result: SimulationResult) -> PerformanceMetrics:
+def read_the_scrolls(result: QuestResult) -> BattleRecord:
     """Compute classical performance metrics from a simulation result.
 
     Technical name: compute_performance — classical performance metrics.
@@ -65,7 +65,7 @@ def read_the_scrolls(result: SimulationResult) -> PerformanceMetrics:
         result: A completed simulation result.
 
     Returns:
-        PerformanceMetrics with all classical measures.
+        BattleRecord with all classical measures.
     """
     total_days = result.green_days + result.red_days + result.flat_days
     green_ratio = result.green_days / total_days if total_days > 0 else 0.0
@@ -75,7 +75,7 @@ def read_the_scrolls(result: SimulationResult) -> PerformanceMetrics:
     daily_pnls = [row.realized_pnl for row in result.daily_ledger]
     avg_daily = sum(daily_pnls) / len(daily_pnls) if daily_pnls else 0.0
 
-    return PerformanceMetrics(
+    return BattleRecord(
         net_pnl=result.net_pnl,
         gross_pnl=result.gross_pnl,
         fees_total=result.fees_total,
@@ -93,7 +93,7 @@ def read_the_scrolls(result: SimulationResult) -> PerformanceMetrics:
     )
 
 
-def count_the_fallen(result: SimulationResult) -> SurvivalMetrics:
+def count_the_fallen(result: QuestResult) -> FateRecord:
     """Compute survival metrics from a simulation result.
 
     Technical name: compute_survival — survival status and breakdown.
@@ -102,11 +102,11 @@ def count_the_fallen(result: SimulationResult) -> SurvivalMetrics:
         result: A completed simulation result.
 
     Returns:
-        SurvivalMetrics with survival status and breakdown.
+        FateRecord with survival status and breakdown.
     """
     trading_days = sum(1 for row in result.daily_ledger if row.trades_count > 0)
 
-    return SurvivalMetrics(
+    return FateRecord(
         survived=result.survived_to_end,
         passed_evaluation=result.passed_evaluation,
         failure_reason=result.failure_reason,
@@ -125,8 +125,8 @@ def count_the_fallen(result: SimulationResult) -> SurvivalMetrics:
 
 
 @dataclass(frozen=True)
-class AggregateMetrics:
-    """Aggregated metrics across multiple simulation runs."""
+class AgeRecord:
+    """Technical name: AggregateMetrics — aggregated metrics across multiple simulation runs."""
 
     n_runs: int
     survival_rate: float
@@ -142,7 +142,7 @@ class AggregateMetrics:
     mean_trade_count: float
 
 
-def chronicle_the_age(results: list[SimulationResult]) -> AggregateMetrics:
+def chronicle_the_age(results: list[QuestResult]) -> AgeRecord:
     """Compute aggregate metrics over many simulation runs.
 
     Technical name: compute_aggregate — aggregate metrics over runs.
@@ -151,11 +151,11 @@ def chronicle_the_age(results: list[SimulationResult]) -> AggregateMetrics:
         results: List of simulation results from multiple runs.
 
     Returns:
-        AggregateMetrics summarizing the distribution of outcomes.
+        AgeRecord summarizing the distribution of outcomes.
     """
     n = len(results)
     if n == 0:
-        return AggregateMetrics(
+        return AgeRecord(
             n_runs=0,
             survival_rate=0,
             pass_rate=0,
@@ -179,7 +179,7 @@ def chronicle_the_age(results: list[SimulationResult]) -> AggregateMetrics:
     fail_total = sum(1 for r in results if r.failure_reason == FailureReason.MOUNT_DOOM)
     fail_trailing = sum(1 for r in results if r.failure_reason == FailureReason.NAZGUL)
 
-    return AggregateMetrics(
+    return AgeRecord(
         n_runs=n,
         survival_rate=survived / n,
         pass_rate=passed / n,
@@ -200,7 +200,7 @@ def chronicle_the_age(results: list[SimulationResult]) -> AggregateMetrics:
 # ---------------------------------------------------------------------------
 
 
-def sing_the_tale(result: SimulationResult) -> str:
+def sing_the_tale(result: QuestResult) -> str:
     """Format a human-readable summary of a simulation result.
 
     Technical name: format_summary — formatted text report.

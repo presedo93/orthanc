@@ -52,8 +52,8 @@ class FailureReason(str, Enum):
 
 
 @dataclass(frozen=True)
-class Trade:
-    """A closed trade produced by the execution engine."""
+class Skirmish:
+    """Technical name: Trade — a closed trade produced by the execution engine."""
 
     trade_id: int
     symbol: str
@@ -76,8 +76,8 @@ class Trade:
 
 
 @dataclass(frozen=True)
-class DailyLedgerRow:
-    """Summary of a single trading day."""
+class DailyChronicle:
+    """Technical name: DailyLedgerRow — summary of a single trading day."""
 
     date: str
     start_balance: float
@@ -99,8 +99,8 @@ class DailyLedgerRow:
 
 
 @dataclass
-class AccountState:
-    """Mutable account state tracked during simulation.
+class RealmState:
+    """Technical name: AccountState — mutable account state tracked during simulation.
 
     Updated bar-by-bar or day-by-day as the simulator processes results.
     """
@@ -134,8 +134,8 @@ class AccountState:
 
 
 @dataclass(frozen=True)
-class SimulationResult:
-    """Full result of a single simulation run."""
+class QuestResult:
+    """Technical name: SimulationResult — full result of a single simulation run."""
 
     strategy_name: str
     firm_name: str
@@ -159,7 +159,7 @@ class SimulationResult:
     trade_count: int
     sharpe_ratio: float
     sortino_ratio: float
-    daily_ledger: list[DailyLedgerRow] = field(default_factory=list)
-    trade_log: list[Trade] = field(default_factory=list)
+    daily_ledger: list[DailyChronicle] = field(default_factory=list)
+    trade_log: list[Skirmish] = field(default_factory=list)
     equity_curve: list[float] = field(default_factory=list)
     config_snapshot: dict[str, object] = field(default_factory=dict)

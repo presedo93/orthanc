@@ -84,8 +84,8 @@ SCHEMA_TO_TIMEFRAME: dict[Schema, str] = {
 
 
 @dataclass
-class BentoFeed:
-    """Configuration for a DataBento data feed.
+class TowerFeed:
+    """Technical name: BentoFeed — configuration for a DataBento data feed.
 
     Attributes:
         name: Identifier for cache directory (e.g., "bento_ohlcv").
@@ -101,25 +101,25 @@ class BentoFeed:
 
 
 # Pre-configured feeds for each OHLCV schema
-FEED_OHLCV_1S = BentoFeed(
+FEED_OHLCV_1S = TowerFeed(
     name='bento_ohlcv',
     schema=Schema.OHLCV_1S,
     columns=OHLCV_COLUMNS,
 )
 
-FEED_OHLCV_1M = BentoFeed(
+FEED_OHLCV_1M = TowerFeed(
     name='bento_ohlcv',
     schema=Schema.OHLCV_1M,
     columns=OHLCV_COLUMNS,
 )
 
-FEED_OHLCV_1H = BentoFeed(
+FEED_OHLCV_1H = TowerFeed(
     name='bento_ohlcv',
     schema=Schema.OHLCV_1H,
     columns=OHLCV_COLUMNS,
 )
 
-FEED_OHLCV_1D = BentoFeed(
+FEED_OHLCV_1D = TowerFeed(
     name='bento_ohlcv',
     schema=Schema.OHLCV_1D,
     columns=OHLCV_COLUMNS,
@@ -140,7 +140,7 @@ SCHEMA_MAP: dict[str, Schema] = {
 
 
 # Feed lookup by schema
-FEED_MAP: dict[Schema, BentoFeed] = {
+FEED_MAP: dict[Schema, TowerFeed] = {
     Schema.OHLCV_1S: FEED_OHLCV_1S,
     Schema.OHLCV_1M: FEED_OHLCV_1M,
     Schema.OHLCV_1H: FEED_OHLCV_1H,

@@ -30,7 +30,7 @@ import pandas as pd
 import polars as pl
 
 from ..memory import (
-    TimeRange,
+    Gaze,
     find_cached_files,
     find_gaps,
     get_cache_dir,
@@ -38,15 +38,15 @@ from ..memory import (
     merge_and_save,
 )
 from ..visions import parse_timestamp
-from .adapter import BentoAdapter
+from .adapter import TowerAdapter
 from .fetcher import fetch_range
 from .types import (
     FEED_MAP,
     SCHEMA_MAP,
     SCHEMA_TO_TIMEFRAME,
-    BentoFeed,
     Schema,
     SType,
+    TowerFeed,
 )
 
 
@@ -86,7 +86,7 @@ class BentoHandler:
             dataset: Dataset identifier (default: 'GLBX.MDP3' for CME futures).
             data_dir: Directory for storing parquet cache files.
         """
-        self._adapter = BentoAdapter(api_key=api_key, dataset=dataset)
+        self._adapter = TowerAdapter(api_key=api_key, dataset=dataset)
         self._dataset = dataset
         self._dir = Path(data_dir)
 
@@ -142,7 +142,7 @@ class BentoHandler:
         # Parse timestamps
         since_ms = parse_timestamp(since)
         until_ms = parse_timestamp(until) if until else int(time.time() * 1000)
-        requested = TimeRange(since_ms, until_ms)
+        requested = Gaze(since_ms, until_ms)
 
         # Fetch data for each symbol
         all_frames: list[pl.DataFrame] = []
@@ -217,8 +217,8 @@ class BentoHandler:
         symbol: str,
         schema: Schema,
         timeframe: str,
-        requested: TimeRange,
-        config: BentoFeed,
+        requested: Gaze,
+        config: TowerFeed,
         stype_in: SType,
     ) -> pl.DataFrame | None:
         """Fetch data for a single symbol with caching.

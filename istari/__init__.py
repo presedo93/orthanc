@@ -7,8 +7,8 @@ independently of any prop firm rules. Strategies produce entry/exit
 signals; the execution engine turns them into equity curves and trade logs.
 """
 
-from .council_of_wizards import Strategy, summon_istari
-from .forge import ExecutionResult, forge_battle
+from .council_of_wizards import Istari, summon_istari
+from .forge import ForgeResult, forge_battle
 from .playbook import (
     Aragorn,
     Gandalf,
@@ -19,28 +19,28 @@ from .playbook import (
 )
 from .scrolls import (
     Direction,
-    ExecutionConfig,
-    RegimeConfig,
-    RegimeSwitcherConfig,
+    ForgeConfig,
+    RealmConfig,
+    SarumanConfig,
+    Scroll,
     SizingMode,
-    StrategyConfig,
-    WeightAdjustmentConfig,
+    WeightSpell,
 )
 
 __all__ = [
     # Config (scrolls)
     'Direction',
-    'ExecutionConfig',
-    'RegimeConfig',
-    'RegimeSwitcherConfig',
+    'ForgeConfig',
+    'RealmConfig',
+    'SarumanConfig',
+    'Scroll',
     'SizingMode',
-    'StrategyConfig',
-    'WeightAdjustmentConfig',
+    'WeightSpell',
     # Execution (forge)
-    'ExecutionResult',
+    'ForgeResult',
     'forge_battle',
     # Registry (council of wizards)
-    'Strategy',
+    'Istari',
     'summon_istari',
     # Playbook (the wizards)
     'Aragorn',

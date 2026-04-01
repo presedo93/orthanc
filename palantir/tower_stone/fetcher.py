@@ -10,19 +10,19 @@ from typing import Any
 
 import polars as pl
 
-from ..memory import TimeRange, save_checkpoint
-from .adapter import BentoAdapter
-from .types import BentoFeed, Schema, SType
+from ..memory import Gaze, save_checkpoint
+from .adapter import TowerAdapter
+from .types import Schema, SType, TowerFeed
 
 logger = logging.getLogger(__name__)
 
 
 def fetch_range(
-    adapter: BentoAdapter,
-    config: BentoFeed,
+    adapter: TowerAdapter,
+    config: TowerFeed,
     symbol: str,
     schema: Schema,
-    gap: TimeRange,
+    gap: Gaze,
     stype_in: SType = SType.CONTINUOUS,
     cache_dir: Path | None = None,
 ) -> list[dict[str, Any]]:
@@ -35,7 +35,7 @@ def fetch_range(
     results in a single request (up to reasonable limits).
 
     Args:
-        adapter: Initialized BentoAdapter instance.
+        adapter: Initialized TowerAdapter instance.
         config: Feed configuration.
         symbol: Instrument symbol (e.g., 'MNQ.v.0').
         schema: OHLCV schema (ohlcv-1m, ohlcv-1h, etc.).
@@ -90,9 +90,7 @@ def fetch_range(
         return []
 
 
-def _filter_to_range(
-    records: list[dict[str, Any]], gap: TimeRange
-) -> list[dict[str, Any]]:
+def _filter_to_range(records: list[dict[str, Any]], gap: Gaze) -> list[dict[str, Any]]:
     """Filter records to exact requested time range.
 
     DataBento may return data slightly outside the requested range,
@@ -110,9 +108,9 @@ def _filter_to_range(
 
 def _save_checkpoint(
     cache_dir: Path,
-    config: BentoFeed,
+    config: TowerFeed,
     records: list[dict[str, Any]],
-    gap: TimeRange,
+    gap: Gaze,
 ) -> None:
     """Save checkpoint for crash recovery.
 

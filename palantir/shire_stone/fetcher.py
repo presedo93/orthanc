@@ -8,17 +8,17 @@ from typing import Any
 
 import polars as pl
 
-from ..memory import TimeRange, save_checkpoint
-from .adapter import ExcAdapter
-from .types import DataFeed, Exchange
+from ..memory import Gaze, save_checkpoint
+from .adapter import ShireAdapter
+from .types import Exchange, ShireFeed
 
 
 def fetch_range(
     exchange: Exchange,
-    config: DataFeed,
+    config: ShireFeed,
     symbol: str,
     timeframe: str | None,
-    gap: TimeRange,
+    gap: Gaze,
     cache_dir: Path | None = None,
 ) -> list[list] | list[dict]:
     """Fetch exchange data for a complete time range with pagination.
@@ -38,7 +38,7 @@ def fetch_range(
         List of data records (either lists or dicts), sorted by timestamp ascending.
     """
     # Create exchange-specific adapter
-    adapter = ExcAdapter(exchange, config.method_name)
+    adapter = ShireAdapter(exchange, config.method_name)
     initial = adapter.method(symbol, timeframe, gap.since, gap.until)
 
     if not initial:
@@ -70,12 +70,12 @@ def _extract_timestamp(record: list | dict) -> int:
 
 
 def _fetch_forward(
-    adapter: ExcAdapter,
+    adapter: ShireAdapter,
     symbol: str,
     timeframe: str | None,
-    gap: TimeRange,
+    gap: Gaze,
     initial: list[list] | list[dict],
-    config: DataFeed,
+    config: ShireFeed,
     step_ms: int,
     cache_dir: Path | None = None,
 ) -> list[list] | list[dict]:
@@ -141,12 +141,12 @@ def _fetch_forward(
 
 
 def _fetch_backward(
-    adapter: ExcAdapter,
+    adapter: ShireAdapter,
     symbol: str,
     timeframe: str | None,
-    gap: TimeRange,
+    gap: Gaze,
     initial: list[list] | list[dict],
-    config: DataFeed,
+    config: ShireFeed,
     cache_dir: Path | None = None,
 ) -> list[list] | list[dict]:
     """Fetch data moving backward in time (bybit-style pagination).
@@ -212,7 +212,7 @@ def _fetch_backward(
 def _checkpoint(
     checkpoint_dir: Path | None,
     data: list[list] | list[dict],
-    gap: TimeRange,
+    gap: Gaze,
     columns: list[str] | None,
 ) -> None:
     """Convert data to DataFrame and call checkpoint callback."""

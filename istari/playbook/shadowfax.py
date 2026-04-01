@@ -10,12 +10,12 @@ breaks — explosive speed after patient waiting.
 
 import pandas as pd
 
-from ..council_of_wizards import Strategy, ordain_istari
+from ..council_of_wizards import Istari, ordain_istari
 from ..lore import atr, bollinger_width, range_compression
-from ..scrolls import Direction, StrategyConfig
+from ..scrolls import Direction, Scroll
 
 
-class Shadowfax(Strategy):
+class Shadowfax(Istari):
     """Volatility Breakout strategy based on range compression and expansion.
 
     Technical name: VolatilityBreakout — compression/expansion breakout.
@@ -48,9 +48,9 @@ class Shadowfax(Strategy):
         self.exit_bars = int(exit_bars)
         self.direction = direction
 
-    def config(self) -> StrategyConfig:
+    def config(self) -> Scroll:
         """Return strategy configuration from instance state."""
-        return StrategyConfig(
+        return Scroll(
             name='shadowfax',
             params={
                 'compression_period': self.compression_period,

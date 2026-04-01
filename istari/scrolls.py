@@ -40,16 +40,16 @@ class SizingMode(str, Enum):
 # ---------------------------------------------------------------------------
 
 
-class StrategyConfig(BaseModel):
-    """Configuration for a trading strategy."""
+class Scroll(BaseModel):
+    """Technical name: StrategyConfig — configuration for a trading strategy."""
 
     name: str
     params: dict[str, float | int | str | bool] = Field(default_factory=dict)
     direction: Direction = Direction.WESTWARD
 
 
-class ExecutionConfig(BaseModel):
-    """Configuration for trade execution."""
+class ForgeConfig(BaseModel):
+    """Technical name: ExecutionConfig — configuration for trade execution."""
 
     init_cash: float = 50_000.0
     fees: float = 0.001
@@ -62,8 +62,8 @@ class ExecutionConfig(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class RegimeConfig(BaseModel):
-    """Configuration for market regime detection.
+class RealmConfig(BaseModel):
+    """Technical name: RegimeConfig — configuration for market regime detection.
 
     Controls the feature computation periods and thresholds used
     by the heuristic regime detector. All thresholds produce
@@ -102,8 +102,8 @@ class RegimeConfig(BaseModel):
     transition_decay: float = 0.6
 
 
-class WeightAdjustmentConfig(BaseModel):
-    """Controls performance-based and volatility-based weight modifiers.
+class WeightSpell(BaseModel):
+    """Technical name: WeightAdjustmentConfig — controls performance-based and volatility-based weight modifiers.
 
     Both adjustments are multiplicative factors applied to strategy
     weights after regime-based computation. All factors are clamped
@@ -131,15 +131,15 @@ class WeightAdjustmentConfig(BaseModel):
     ceiling: float = 1.5
 
 
-class RegimeSwitcherConfig(BaseModel):
-    """Configuration for the regime-based multi-strategy switcher.
+class SarumanConfig(BaseModel):
+    """Technical name: RegimeSwitcherConfig — configuration for the regime-based multi-strategy switcher.
 
     Controls how regime probabilities map to strategy weights and
     how signals from multiple strategies are combined.
     """
 
-    regime: RegimeConfig = Field(default_factory=RegimeConfig)
-    weight_adj: WeightAdjustmentConfig = Field(default_factory=WeightAdjustmentConfig)
+    regime: RealmConfig = Field(default_factory=RealmConfig)
+    weight_adj: WeightSpell = Field(default_factory=WeightSpell)
 
     # Signal combination threshold — minimum weighted vote to trigger entry
     entry_threshold: float = 0.4

@@ -14,11 +14,11 @@ effectively reducing position sizing and trade frequency.
 
 import pandas as pd
 
-from ..council_of_wizards import Strategy, ordain_istari
-from ..scrolls import Direction, StrategyConfig
+from ..council_of_wizards import Istari, ordain_istari
+from ..scrolls import Direction, Scroll
 
 
-class Shelob(Strategy):
+class Shelob(Istari):
     """Defensive strategy that generates no entries and always exits.
 
     Technical name: Defensive — no-trade / risk-off strategy.
@@ -38,9 +38,9 @@ class Shelob(Strategy):
     ) -> None:
         self.direction = direction
 
-    def config(self) -> StrategyConfig:
+    def config(self) -> Scroll:
         """Return strategy configuration from instance state."""
-        return StrategyConfig(
+        return Scroll(
             name='shelob',
             params={},
             direction=self.direction,

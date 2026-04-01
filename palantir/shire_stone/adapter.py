@@ -8,7 +8,7 @@ even different argument positions.
 
 Example:
     >>> import ccxt
-    >>> adapter = ExcAdapter(ccxt.bybit(), 'fetch_ohlcv')
+    >>> adapter = ShireAdapter(ccxt.bybit(), 'fetch_ohlcv')
     >>> data = adapter.method("BTC/USDT", "1h", since=1704067200000, until=1704153600000)
 """
 
@@ -21,8 +21,8 @@ from .types import Exchange
 logger = logging.getLogger(__name__)
 
 
-class ExcAdapter:
-    """Adapter for calling CCXT methods with exchange-specific parameters.
+class ShireAdapter:
+    """Technical name: ExcAdapter — adapter for calling CCXT methods with exchange-specific parameters.
 
     Handles the complexity of different exchanges requiring different
     parameter names, argument positions, and special handling.
@@ -66,7 +66,7 @@ class ExcAdapter:
             List of records from the exchange, or None on error.
 
         Examples:
-            >>> adapter = ExcAdapter(ccxt.bybit(), 'fetch_ohlcv')
+            >>> adapter = ShireAdapter(ccxt.bybit(), 'fetch_ohlcv')
             >>> data = adapter.method("BTC/USDT", "1h", since=1704067200000)
         """
         if self.is_out_of_range(since, until):

@@ -17,18 +17,18 @@ Function mapping:
 
 from .dark_tongue import (
     DailyLossReference,
-    FirmRuleSet,
+    DarkLaw,
     TotalLossReference,
     TrailingDrawdownMode,
 )
-from .rings import AccountState, FailureReason
+from .rings import FailureReason, RealmState
 
 # ---------------------------------------------------------------------------
 # Daily loss check
 # ---------------------------------------------------------------------------
 
 
-def summon_balrog(state: AccountState, rules: FirmRuleSet) -> FailureReason | None:
+def summon_balrog(state: RealmState, rules: DarkLaw) -> FailureReason | None:
     """Check if the daily loss limit has been breached.
 
     Technical name: check_daily_loss — evaluates daily loss limits.
@@ -77,7 +77,7 @@ def summon_balrog(state: AccountState, rules: FirmRuleSet) -> FailureReason | No
 # ---------------------------------------------------------------------------
 
 
-def enter_mount_doom(state: AccountState, rules: FirmRuleSet) -> FailureReason | None:
+def enter_mount_doom(state: RealmState, rules: DarkLaw) -> FailureReason | None:
     """Check if the total loss limit has been breached.
 
     Technical name: check_total_loss — evaluates total loss limits.
@@ -121,7 +121,7 @@ def enter_mount_doom(state: AccountState, rules: FirmRuleSet) -> FailureReason |
 # ---------------------------------------------------------------------------
 
 
-def update_trailing_dd(state: AccountState, rules: FirmRuleSet) -> float:
+def update_trailing_dd(state: RealmState, rules: DarkLaw) -> float:
     """Compute the updated trailing drawdown floor.
 
     Args:
@@ -160,7 +160,7 @@ def update_trailing_dd(state: AccountState, rules: FirmRuleSet) -> float:
     return max(state.trailing_dd_floor, new_floor)
 
 
-def flee_the_nazgul(state: AccountState, rules: FirmRuleSet) -> FailureReason | None:
+def flee_the_nazgul(state: RealmState, rules: DarkLaw) -> FailureReason | None:
     """Check if the trailing drawdown has been breached.
 
     Technical name: check_trailing_dd — evaluates trailing drawdown.
@@ -189,7 +189,7 @@ def flee_the_nazgul(state: AccountState, rules: FirmRuleSet) -> FailureReason | 
 # ---------------------------------------------------------------------------
 
 
-def seize_the_ring(state: AccountState, rules: FirmRuleSet) -> bool:
+def seize_the_ring(state: RealmState, rules: DarkLaw) -> bool:
     """Check if the profit target has been reached.
 
     Technical name: check_profit_target — evaluates profit target.
@@ -228,7 +228,7 @@ def seize_the_ring(state: AccountState, rules: FirmRuleSet) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def walk_the_miles(state: AccountState, rules: FirmRuleSet) -> bool:
+def walk_the_miles(state: RealmState, rules: DarkLaw) -> bool:
     """Check if minimum trading days requirement has been met.
 
     Technical name: check_min_trading_days — evaluates min trading days.
@@ -251,7 +251,7 @@ def walk_the_miles(state: AccountState, rules: FirmRuleSet) -> bool:
 
 
 def check_consistency_rule(
-    daily_pnls: list[float], rules: FirmRuleSet
+    daily_pnls: list[float], rules: DarkLaw
 ) -> FailureReason | None:
     """Check if the consistency rule is satisfied.
 
@@ -283,7 +283,7 @@ def check_consistency_rule(
 # ---------------------------------------------------------------------------
 
 
-def face_the_gate(state: AccountState, rules: FirmRuleSet) -> FailureReason | None:
+def face_the_gate(state: RealmState, rules: DarkLaw) -> FailureReason | None:
     """Run all rule checks and return the first breach found.
 
     Technical name: check_all_rules — aggregate rule check.

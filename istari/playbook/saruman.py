@@ -20,7 +20,7 @@ from enum import Enum
 import numpy as np
 import pandas as pd
 
-from ..council_of_wizards import Strategy, ordain_istari
+from ..council_of_wizards import Istari, ordain_istari
 from ..lore import (
     adx,
     atr_ratio,
@@ -33,10 +33,10 @@ from ..lore import (
 )
 from ..scrolls import (
     Direction,
-    RegimeConfig,
-    RegimeSwitcherConfig,
-    StrategyConfig,
-    WeightAdjustmentConfig,
+    RealmConfig,
+    SarumanConfig,
+    Scroll,
+    WeightSpell,
 )
 from .aragorn import Aragorn
 from .shadowfax import Shadowfax
@@ -148,7 +148,7 @@ def _weighted_vote(
 # ---------------------------------------------------------------------------
 
 
-def compute_regime_features(df: pd.DataFrame, cfg: RegimeConfig) -> pd.DataFrame:
+def compute_regime_features(df: pd.DataFrame, cfg: RealmConfig) -> pd.DataFrame:
     """Compute all features needed for regime detection.
 
     Args:
@@ -183,7 +183,7 @@ def compute_regime_features(df: pd.DataFrame, cfg: RegimeConfig) -> pd.DataFrame
 
 def detect_regime_probabilities(
     features: pd.DataFrame,
-    cfg: RegimeConfig,
+    cfg: RealmConfig,
 ) -> pd.DataFrame:
     """Detect market regime as probability distribution per bar.
 
@@ -376,7 +376,7 @@ def apply_transition_scaling(
 def compute_performance_factors(
     close: pd.Series,  # type: ignore[type-arg]
     strategy_entries: dict[str, pd.Series],  # type: ignore[type-arg]
-    cfg: WeightAdjustmentConfig,
+    cfg: WeightSpell,
 ) -> pd.DataFrame:
     """Compute per-strategy performance factors from rolling hit rate.
 
@@ -430,7 +430,7 @@ def compute_performance_factors(
 
 def compute_volatility_scaling(
     close: pd.Series,  # type: ignore[type-arg]
-    cfg: WeightAdjustmentConfig,
+    cfg: WeightSpell,
 ) -> pd.Series:  # type: ignore[type-arg]
     """Compute a scalar volatility adjustment factor per bar.
 
@@ -485,7 +485,7 @@ def apply_weight_adjustments(
 
 #: Default sub-strategy constructors keyed by strategy key.
 #: Used by Saruman to build its strategy dict.
-_STRATEGY_CONSTRUCTORS: dict[str, type[Strategy]] = {
+_STRATEGY_CONSTRUCTORS: dict[str, type[Istari]] = {
     'aragorn': Aragorn,
     'treebeard': Treebeard,
     'shadowfax': Shadowfax,
@@ -493,7 +493,7 @@ _STRATEGY_CONSTRUCTORS: dict[str, type[Strategy]] = {
 }
 
 
-class Saruman(Strategy):
+class Saruman(Istari):
     """Adaptive multi-strategy switcher based on market regime detection.
 
     Technical name: RegimeSwitcher — regime-based multi-strategy orchestrator.
@@ -515,7 +515,7 @@ class Saruman(Strategy):
 
     def __init__(
         self,
-        switcher_config: RegimeSwitcherConfig | None = None,
+        switcher_config: SarumanConfig | None = None,
         direction: Direction = Direction.WESTWARD,
         *,
         # Flat overrides for registry compatibility (summon_istari passes
@@ -531,17 +531,17 @@ class Saruman(Strategy):
         mean_rev_num_std: float = 2.0,
         vol_breakout_compression_period: int | float = 20,
         vol_breakout_atr_multiplier: float = 1.5,
-        regime_config: RegimeConfig | None = None,
-        weight_adj_config: WeightAdjustmentConfig | None = None,
+        regime_config: RealmConfig | None = None,
+        weight_adj_config: WeightSpell | None = None,
         **_kwargs: object,
     ) -> None:
         # Build config from explicit object or from flat kwargs
         if switcher_config is not None:
             cfg = switcher_config
         else:
-            cfg = RegimeSwitcherConfig(
-                regime=regime_config or RegimeConfig(),
-                weight_adj=weight_adj_config or WeightAdjustmentConfig(),
+            cfg = SarumanConfig(
+                regime=regime_config or RealmConfig(),
+                weight_adj=weight_adj_config or WeightSpell(),
                 entry_threshold=entry_threshold or 0.4,
                 exit_threshold=exit_threshold or 0.3,
                 trend_fast_window=int(trend_fast_window),
@@ -558,7 +558,7 @@ class Saruman(Strategy):
         self.direction = direction
 
         # Build sub-strategies from config
-        self._strategies: dict[str, Strategy] = {
+        self._strategies: dict[str, Istari] = {
             'aragorn': Aragorn(
                 fast_window=cfg.trend_fast_window,
                 slow_window=cfg.trend_slow_window,
@@ -579,9 +579,9 @@ class Saruman(Strategy):
             'shelob': Shelob(direction=direction),
         }
 
-    def config(self) -> StrategyConfig:
+    def config(self) -> Scroll:
         """Return strategy configuration from instance state."""
-        return StrategyConfig(
+        return Scroll(
             name='saruman',
             params={
                 'entry_threshold': self._cfg.entry_threshold,

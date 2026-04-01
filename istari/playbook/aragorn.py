@@ -10,12 +10,12 @@ following the prevailing trend.
 
 import pandas as pd
 
-from ..council_of_wizards import Strategy, ordain_istari
+from ..council_of_wizards import Istari, ordain_istari
 from ..lore import adx, atr, ema
-from ..scrolls import Direction, StrategyConfig
+from ..scrolls import Direction, Scroll
 
 
-class Aragorn(Strategy):
+class Aragorn(Istari):
     """Trend Following strategy using EMA alignment and breakout entries.
 
     Technical name: TrendFollow — trend-following with breakout entries.
@@ -53,9 +53,9 @@ class Aragorn(Strategy):
         self.breakout_period = int(breakout_period)
         self.direction = direction
 
-    def config(self) -> StrategyConfig:
+    def config(self) -> Scroll:
         """Return strategy configuration from instance state."""
-        return StrategyConfig(
+        return Scroll(
             name='aragorn',
             params={
                 'fast_window': self.fast_window,

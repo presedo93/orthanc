@@ -10,20 +10,20 @@ from typing import Any
 
 import databento as db
 
-from ..corruption import DataFetchError
+from ..corruption import CorruptionError
 from .types import Schema, SType
 
 logger = logging.getLogger(__name__)
 
 
-class BentoAdapter:
-    """Adapter for DataBento Historical API.
+class TowerAdapter:
+    """Technical name: BentoAdapter — adapter for DataBento Historical API.
 
     Handles API authentication, request construction, and response parsing
     for the timeseries.get_range() endpoint.
 
     Examples:
-        >>> adapter = BentoAdapter(api_key="db-xxx", dataset="GLBX.MDP3")
+        >>> adapter = TowerAdapter(api_key="db-xxx", dataset="GLBX.MDP3")
         >>> records = adapter.fetch_ohlcv(
         ...     symbol="MNQ.v.0",
         ...     schema=Schema.OHLCV_1M,
@@ -68,7 +68,7 @@ class BentoAdapter:
             List of OHLCV records with keys: timestamp, open, high, low, close, volume.
 
         Raises:
-            DataFetchError: If API request fails.
+            CorruptionError: If API request fails.
         """
         # Convert milliseconds to ISO format strings for DataBento API
         start_iso = self._ms_to_iso(start)
@@ -104,10 +104,10 @@ class BentoAdapter:
 
         except db.BentoError as e:
             logger.error('DataBento API error for %s: %s', symbol, e)
-            raise DataFetchError(f'DataBento API error for {symbol}: {e}') from e
+            raise CorruptionError(f'DataBento API error for {symbol}: {e}') from e
         except Exception as e:
             logger.error('Unexpected error fetching %s: %s', symbol, e)
-            raise DataFetchError(f'Unexpected error fetching {symbol}: {e}') from e
+            raise CorruptionError(f'Unexpected error fetching {symbol}: {e}') from e
 
     def get_cost(
         self,
@@ -189,7 +189,7 @@ class BentoAdapter:
         # Historical client doesn't need explicit cleanup
         pass
 
-    def __enter__(self) -> 'BentoAdapter':
+    def __enter__(self) -> 'TowerAdapter':
         return self
 
     def __exit__(self, *args: object) -> None:

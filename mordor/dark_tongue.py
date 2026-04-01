@@ -53,8 +53,8 @@ class TradingDayDefinition(str, Enum):
 # ---------------------------------------------------------------------------
 
 
-class RiskConfig(BaseModel):
-    """Configuration for internal risk management."""
+class PerilConfig(BaseModel):
+    """Technical name: RiskConfig — configuration for internal risk management."""
 
     risk_per_trade: float = 0.01
     max_trades_per_day: int = 10
@@ -63,8 +63,8 @@ class RiskConfig(BaseModel):
     consecutive_losses_cutoff: int | None = None
 
 
-class FirmRuleSet(BaseModel):
-    """Rules for a specific prop firm phase.
+class DarkLaw(BaseModel):
+    """Technical name: FirmRuleSet — rules for a specific prop firm phase.
 
     Each field maps to a hard constraint the firm applies.
     None means the rule is not active.
@@ -93,8 +93,8 @@ class FirmRuleSet(BaseModel):
     consistency_threshold_pct: float = 0.30
 
 
-class FirmConfig(BaseModel):
-    """Configuration for a prop firm account."""
+class DarkRealmConfig(BaseModel):
+    """Technical name: FirmConfig — configuration for a prop firm account."""
 
     firm_name: str = 'generic_prop'
     plan_name: str = '50k_single_phase'
@@ -103,11 +103,11 @@ class FirmConfig(BaseModel):
     reset_fee: float = 100.0
     activation_fee: float = 0.0
     profit_split_pct: float = 0.80
-    rule_set: FirmRuleSet = Field(default_factory=FirmRuleSet)
+    rule_set: DarkLaw = Field(default_factory=DarkLaw)
 
 
-class SimulationConfig(BaseModel):
-    """Configuration for a simulation run."""
+class QuestConfig(BaseModel):
+    """Technical name: SimulationConfig — configuration for a simulation run."""
 
     seed: int = 42
     mode: str = 'historical'

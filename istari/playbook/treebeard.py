@@ -10,12 +10,12 @@ like price reverting to the mean.
 
 import pandas as pd
 
-from ..council_of_wizards import Strategy, ordain_istari
+from ..council_of_wizards import Istari, ordain_istari
 from ..lore import bollinger_bands, z_score
-from ..scrolls import Direction, StrategyConfig
+from ..scrolls import Direction, Scroll
 
 
-class Treebeard(Strategy):
+class Treebeard(Istari):
     """Mean Reversion strategy using Bollinger Bands.
 
     Technical name: MeanReversion — Bollinger Bands / mean reversion.
@@ -47,9 +47,9 @@ class Treebeard(Strategy):
         self.zscore_exit = float(zscore_exit)
         self.direction = direction
 
-    def config(self) -> StrategyConfig:
+    def config(self) -> Scroll:
         """Return strategy configuration from instance state."""
-        return StrategyConfig(
+        return Scroll(
             name='treebeard',
             params={
                 'period': self.period,

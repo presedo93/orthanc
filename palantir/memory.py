@@ -13,8 +13,8 @@ import polars as pl
 
 
 @dataclass
-class TimeRange:
-    """Represents a half-open time range [since, until) in milliseconds.
+class Gaze:
+    """Technical name: TimeRange — represents a half-open time range [since, until) in milliseconds.
 
     The range includes `since` but excludes `until`, following Python slice semantics.
     """
@@ -22,25 +22,25 @@ class TimeRange:
     since: int
     until: int
 
-    def overlaps(self, other: 'TimeRange') -> bool:
+    def overlaps(self, other: 'Gaze') -> bool:
         """Check if this range overlaps with another."""
         return self.since < other.until and other.since < self.until
 
-    def contains(self, other: 'TimeRange') -> bool:
+    def contains(self, other: 'Gaze') -> bool:
         """Check if this range fully contains another."""
         return self.since <= other.since and self.until >= other.until
 
 
 @dataclass
-class CachedFile:
-    """Represents a cached parquet file with its time range."""
+class MemoryFragment:
+    """Technical name: CachedFile — represents a cached parquet file with its time range."""
 
     path: Path
-    time_range: TimeRange
+    time_range: Gaze
     is_checkpoint: bool = False
 
     @classmethod
-    def from_path(cls, path: Path) -> 'CachedFile | None':
+    def from_path(cls, path: Path) -> 'MemoryFragment | None':
         """Parse a parquet file path to extract time range.
 
         Supports both final and checkpoint files:
@@ -51,7 +51,7 @@ class CachedFile:
         checkp_match = re.match(r'(\d+)_(\d+)\.checkpoint\.parquet$', path.name)
         if checkp_match:
             since, until = int(checkp_match.group(1)), int(checkp_match.group(2))
-            return cls(path, TimeRange(since, until), True)
+            return cls(path, Gaze(since, until), True)
 
         # Check for regular cached file
         match = re.match(r'(\d+)_(\d+)\.parquet$', path.name)
@@ -59,12 +59,12 @@ class CachedFile:
             return None
 
         since, until = int(match.group(1)), int(match.group(2))
-        return cls(path, TimeRange(since, until), False)
+        return cls(path, Gaze(since, until), False)
 
 
 @dataclass
-class CheckpointMetadata:
-    """Metadata for checkpoint files to aid recovery."""
+class MemoryStone:
+    """Technical name: CheckpointMetadata — metadata for checkpoint files to aid recovery."""
 
     gap_since: int
     gap_until: int
@@ -85,7 +85,7 @@ class CheckpointMetadata:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'CheckpointMetadata':
+    def from_dict(cls, data: dict) -> 'MemoryStone':
         """Create from dictionary."""
         return cls(**data)
 
@@ -119,7 +119,7 @@ def get_cache_dir(
 
 def find_cached_files(
     cache_dir: Path, include_checkpoints: bool = False
-) -> list[CachedFile]:
+) -> list[MemoryFragment]:
     """Find all cached parquet files in a directory, sorted by since time.
 
     Args:
@@ -128,14 +128,14 @@ def find_cached_files(
                            If False (default), only return final cached files.
 
     Returns:
-        List of CachedFile objects sorted by time range start.
+        List of MemoryFragment objects sorted by time range start.
     """
-    files: list[CachedFile] = []
+    files: list[MemoryFragment] = []
     if not cache_dir.exists():
         return files
 
     for path in cache_dir.glob('*.parquet'):
-        cached = CachedFile.from_path(path)
+        cached = MemoryFragment.from_path(path)
         if cached:
             # Filter out checkpoints unless explicitly requested
             if include_checkpoints or not cached.is_checkpoint:
@@ -144,7 +144,7 @@ def find_cached_files(
     return sorted(files, key=lambda f: f.time_range.since)
 
 
-def find_gaps(cached_files: list[CachedFile], requested: TimeRange) -> list[TimeRange]:
+def find_gaps(cached_files: list[MemoryFragment], requested: Gaze) -> list[Gaze]:
     """Find gaps in cached data that need to be fetched.
 
     Returns a list of time ranges that are not covered by cached files.
@@ -152,7 +152,7 @@ def find_gaps(cached_files: list[CachedFile], requested: TimeRange) -> list[Time
     if not cached_files:
         return [requested]
 
-    gaps: list[TimeRange] = []
+    gaps: list[Gaze] = []
     current_pos = requested.since
 
     for cached in cached_files:
@@ -166,20 +166,20 @@ def find_gaps(cached_files: list[CachedFile], requested: TimeRange) -> list[Time
         # If there's a gap before this file
         if cached.time_range.since > current_pos:
             gap_end = min(cached.time_range.since, requested.until)
-            gaps.append(TimeRange(current_pos, gap_end))
+            gaps.append(Gaze(current_pos, gap_end))
 
         # Move current position to end of this file
         current_pos = max(current_pos, cached.time_range.until)
 
     # Check if there's a gap at the end
     if current_pos < requested.until:
-        gaps.append(TimeRange(current_pos, requested.until))
+        gaps.append(Gaze(current_pos, requested.until))
 
     return gaps
 
 
 def load_cached_data(
-    cached_files: list[CachedFile], requested: TimeRange
+    cached_files: list[MemoryFragment], requested: Gaze
 ) -> pl.DataFrame | None:
     """Load and filter cached data for the requested range."""
     relevant_files = [f for f in cached_files if f.time_range.overlaps(requested)]
@@ -208,9 +208,9 @@ def load_cached_data(
 
 def merge_and_save(
     cache_dir: Path,
-    cached_files: list[CachedFile],
+    cached_files: list[MemoryFragment],
     new_data: pl.DataFrame,
-    requested: TimeRange,
+    requested: Gaze,
     cleanup_checkpoints: bool = True,
 ) -> Path | None:
     """Merge new data with cached data and save as a consolidated file.
@@ -276,7 +276,7 @@ def merge_and_save(
     temp_path.replace(final_path)
 
     # Remove old overlapping cached files
-    new_range = TimeRange(file_since, file_until)
+    new_range = Gaze(file_since, file_until)
     for cached in cached_files:
         if new_range.contains(cached.time_range) and cached.path != final_path:
             cached.path.unlink(missing_ok=True)
@@ -288,7 +288,7 @@ def merge_and_save(
     return final_path
 
 
-def save_checkpoint(cache_dir: Path, data: pl.DataFrame, gap: TimeRange) -> Path | None:
+def save_checkpoint(cache_dir: Path, data: pl.DataFrame, gap: Gaze) -> Path | None:
     """Save checkpoint data incrementally during fetch operations.
 
     Creates a checkpoint file with metadata for crash recovery. Checkpoint
@@ -327,7 +327,7 @@ def save_checkpoint(cache_dir: Path, data: pl.DataFrame, gap: TimeRange) -> Path
     temp_path.replace(checkpoint_path)
 
     # Write metadata for recovery
-    metadata = CheckpointMetadata(
+    metadata = MemoryStone(
         gap_since=gap.since,
         gap_until=gap.until,
         data_since=data_since,
@@ -375,7 +375,7 @@ def cleanup_old_checkpoints(cache_dir: Path, max_age_hours: int = 24) -> int:
     return removed_count
 
 
-def _cleanup_checkpoints(cache_dir: Path, completed_range: TimeRange) -> None:
+def _cleanup_checkpoints(cache_dir: Path, completed_range: Gaze) -> None:
     """Remove checkpoint files that overlap with a completed range.
 
     This is an internal helper that removes checkpoints after a successful

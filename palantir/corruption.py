@@ -18,8 +18,8 @@ T = TypeVar('T')
 logger = logging.getLogger(__name__)
 
 
-class DataFetchError(Exception):
-    """Raised when data fetching fails."""
+class CorruptionError(Exception):
+    """Technical name: DataFetchError — raised when data fetching fails."""
 
 
 def ccxt_errors(

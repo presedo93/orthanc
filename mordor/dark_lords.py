@@ -1,6 +1,6 @@
 """Firm preset configurations — the Dark Lords of Mordor.
 
-Factory functions that return pre-configured FirmConfig instances for
+Factory functions that return pre-configured DarkRealmConfig instances for
 common prop firm profiles. Start with generic profiles; specific
 commercial presets can be added later.
 
@@ -15,8 +15,8 @@ Function mapping:
 
 from .dark_tongue import (
     DailyLossReference,
-    FirmConfig,
-    FirmRuleSet,
+    DarkLaw,
+    DarkRealmConfig,
     TotalLossReference,
     TrailingDrawdownMode,
 )
@@ -31,7 +31,7 @@ __all__ = [
 
 def sauron_basic(
     account_size: float = 50_000.0,
-) -> FirmConfig:
+) -> DarkRealmConfig:
     """Generic single-phase evaluation account.
 
     Technical name: generic_single_phase_eval — conservative single-phase eval.
@@ -43,9 +43,9 @@ def sauron_basic(
         account_size: Starting account balance.
 
     Returns:
-        FirmConfig for a single-phase evaluation.
+        DarkRealmConfig for a single-phase evaluation.
     """
-    return FirmConfig(
+    return DarkRealmConfig(
         firm_name='generic_prop',
         plan_name=f'{int(account_size / 1000)}k_single_phase',
         account_size=account_size,
@@ -53,7 +53,7 @@ def sauron_basic(
         reset_fee=account_size * 0.002,
         activation_fee=0.0,
         profit_split_pct=0.80,
-        rule_set=FirmRuleSet(
+        rule_set=DarkLaw(
             max_daily_loss_pct=0.04,
             daily_loss_reference=DailyLossReference.BALANCE_START_OF_DAY,
             daily_loss_includes_unrealized=True,
@@ -70,7 +70,7 @@ def sauron_basic(
 
 def sauron_trial(
     account_size: float = 100_000.0,
-) -> FirmConfig:
+) -> DarkRealmConfig:
     """Generic two-phase evaluation account (phase 1: challenge).
 
     Technical name: generic_two_phase_eval — tighter challenge phase.
@@ -78,16 +78,16 @@ def sauron_trial(
     Tighter profit target (10%) to reflect challenge phase difficulty.
     5% daily loss, 10% total loss, 10 minimum trading days.
 
-    Note: Phase 2 (verification) would use a separate FirmConfig with
+    Note: Phase 2 (verification) would use a separate DarkRealmConfig with
     a lower profit target. Multi-phase state machine is Phase 2 work.
 
     Args:
         account_size: Starting account balance.
 
     Returns:
-        FirmConfig for phase 1 of a two-phase evaluation.
+        DarkRealmConfig for phase 1 of a two-phase evaluation.
     """
-    return FirmConfig(
+    return DarkRealmConfig(
         firm_name='generic_two_phase',
         plan_name=f'{int(account_size / 1000)}k_phase1',
         account_size=account_size,
@@ -95,7 +95,7 @@ def sauron_trial(
         reset_fee=account_size * 0.002,
         activation_fee=0.0,
         profit_split_pct=0.80,
-        rule_set=FirmRuleSet(
+        rule_set=DarkLaw(
             max_daily_loss_pct=0.05,
             daily_loss_reference=DailyLossReference.BALANCE_START_OF_DAY,
             daily_loss_includes_unrealized=True,
@@ -110,7 +110,7 @@ def sauron_trial(
     )
 
 
-def witch_king() -> FirmConfig:
+def witch_king() -> DarkRealmConfig:
     """FTMO-inspired 10k evaluation account.
 
     Technical name: ftmo_like_10k — FTMO-style rules.
@@ -119,9 +119,9 @@ def witch_king() -> FirmConfig:
     Includes minimum 4 trading days and no trailing drawdown.
 
     Returns:
-        FirmConfig modeled after FTMO-style rules.
+        DarkRealmConfig modeled after FTMO-style rules.
     """
-    return FirmConfig(
+    return DarkRealmConfig(
         firm_name='ftmo_like',
         plan_name='10k_challenge',
         account_size=10_000.0,
@@ -129,7 +129,7 @@ def witch_king() -> FirmConfig:
         reset_fee=99.0,
         activation_fee=0.0,
         profit_split_pct=0.80,
-        rule_set=FirmRuleSet(
+        rule_set=DarkLaw(
             max_daily_loss_pct=0.05,
             daily_loss_reference=DailyLossReference.EQUITY_START_OF_DAY,
             daily_loss_includes_unrealized=True,
@@ -144,7 +144,7 @@ def witch_king() -> FirmConfig:
     )
 
 
-def mouth_of_sauron() -> FirmConfig:
+def mouth_of_sauron() -> DarkRealmConfig:
     """Topstep-inspired 50k evaluation account.
 
     Technical name: topstep_like_50k — Topstep-style rules.
@@ -153,9 +153,9 @@ def mouth_of_sauron() -> FirmConfig:
     rather than a fixed total loss. Profit target of 6%.
 
     Returns:
-        FirmConfig modeled after Topstep-style rules.
+        DarkRealmConfig modeled after Topstep-style rules.
     """
-    return FirmConfig(
+    return DarkRealmConfig(
         firm_name='topstep_like',
         plan_name='50k_combine',
         account_size=50_000.0,
@@ -163,7 +163,7 @@ def mouth_of_sauron() -> FirmConfig:
         reset_fee=99.0,
         activation_fee=150.0,
         profit_split_pct=0.90,
-        rule_set=FirmRuleSet(
+        rule_set=DarkLaw(
             max_daily_loss_pct=0.04,
             daily_loss_reference=DailyLossReference.BALANCE_START_OF_DAY,
             daily_loss_includes_unrealized=True,

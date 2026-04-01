@@ -12,7 +12,7 @@ Function mapping:
 
 import pandas as pd
 
-from istari import ExecutionResult
+from istari import ForgeResult
 
 from .black_gate import (
     face_the_gate,
@@ -20,23 +20,23 @@ from .black_gate import (
     update_trailing_dd,
     walk_the_miles,
 )
-from .dark_tongue import FirmConfig, FirmRuleSet
+from .dark_tongue import DarkLaw, DarkRealmConfig
 from .rings import (
-    AccountState,
-    DailyLedgerRow,
+    DailyChronicle,
     FailureReason,
-    SimulationResult,
-    Trade,
+    QuestResult,
+    RealmState,
+    Skirmish,
 )
 
 
 def cast_into_shadow(
-    result: ExecutionResult,
-    firm_config: FirmConfig,
+    result: ForgeResult,
+    firm_config: DarkRealmConfig,
     strategy_name: str,
     symbol: str,
     timeframe: str,
-) -> SimulationResult:
+) -> QuestResult:
     """Run a prop firm account simulation over execution results.
 
     Technical name: simulate_account — day-by-day prop firm simulation.
@@ -53,7 +53,7 @@ def cast_into_shadow(
         timeframe: Data timeframe.
 
     Returns:
-        SimulationResult with full simulation output.
+        QuestResult with full simulation output.
     """
     rules = firm_config.rule_set
     equity = result.equity_curve
@@ -65,7 +65,7 @@ def cast_into_shadow(
 
     # Initialize account state
     init_balance = firm_config.account_size
-    state = AccountState(
+    state = RealmState(
         starting_balance=init_balance,
         current_balance=init_balance,
         equity=init_balance,
@@ -76,8 +76,8 @@ def cast_into_shadow(
         trailing_dd_floor=_initial_trailing_floor(init_balance, rules),
     )
 
-    daily_ledger: list[DailyLedgerRow] = []
-    trade_log: list[Trade] = []
+    daily_ledger: list[DailyChronicle] = []
+    trade_log: list[Skirmish] = []
     equity_values: list[float] = []
     daily_pnls: list[float] = []
 
@@ -211,7 +211,7 @@ def cast_into_shadow(
 # ---------------------------------------------------------------------------
 
 
-def _initial_trailing_floor(balance: float, rules: FirmRuleSet) -> float:
+def _initial_trailing_floor(balance: float, rules: DarkLaw) -> float:
     """Compute the initial trailing drawdown floor."""
     if rules.trailing_drawdown_pct is not None:
         return balance * (1 - rules.trailing_drawdown_pct)
@@ -256,15 +256,15 @@ def _aggregate_daily_trade_counts(
 
 def _make_ledger_row(
     date_str: str,
-    state: AccountState,
+    state: RealmState,
     realized: float,
     unrealized: float,
     max_intraday_loss: float,
     trade_counts: tuple[int, int, int],
-) -> DailyLedgerRow:
-    """Create a DailyLedgerRow from current state."""
+) -> DailyChronicle:
+    """Create a DailyChronicle from current state."""
     total, wins, losses = trade_counts
-    return DailyLedgerRow(
+    return DailyChronicle(
         date=date_str,
         start_balance=state.daily_start_balance,
         end_balance=state.current_balance,
@@ -280,19 +280,19 @@ def _make_ledger_row(
     )
 
 
-def _build_trade_log(trades_df: pd.DataFrame, symbol: str) -> list[Trade]:
-    """Convert VectorBT trades DataFrame to domain Trade objects."""
+def _build_trade_log(trades_df: pd.DataFrame, symbol: str) -> list[Skirmish]:
+    """Convert VectorBT trades DataFrame to domain Skirmish objects."""
     if trades_df.empty:
         return []
 
-    trade_log: list[Trade] = []
+    trade_log: list[Skirmish] = []
     for idx, row in trades_df.iterrows():
         exit_ts_raw = row.get('Exit Timestamp', '')
         exit_ts = pd.Timestamp(str(exit_ts_raw))
         day_id = str(exit_ts.date()) if pd.notna(exit_ts) else ''
 
         trade_log.append(
-            Trade(
+            Skirmish(
                 trade_id=int(idx),  # type: ignore[arg-type]
                 symbol=symbol,
                 entry_time=str(row.get('Entry Timestamp', '')),
@@ -313,20 +313,20 @@ def _build_trade_log(trades_df: pd.DataFrame, symbol: str) -> list[Trade]:
 
 
 def _build_result(
-    state: AccountState,
-    exec_result: ExecutionResult,
-    daily_ledger: list[DailyLedgerRow],
-    trade_log: list[Trade],
+    state: RealmState,
+    exec_result: ForgeResult,
+    daily_ledger: list[DailyChronicle],
+    trade_log: list[Skirmish],
     equity_values: list[float],
     strategy_name: str,
     symbol: str,
     timeframe: str,
-    firm_config: FirmConfig,
-) -> SimulationResult:
-    """Assemble the final SimulationResult."""
+    firm_config: DarkRealmConfig,
+) -> QuestResult:
+    """Assemble the final QuestResult."""
     max_daily_loss = max((row.max_intraday_loss for row in daily_ledger), default=0.0)
 
-    return SimulationResult(
+    return QuestResult(
         strategy_name=strategy_name,
         firm_name=firm_config.firm_name,
         symbol=symbol,

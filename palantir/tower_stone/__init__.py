@@ -32,7 +32,7 @@ Examples:
     ... )
 """
 
-from .adapter import BentoAdapter
+from .adapter import TowerAdapter
 from .handler import BentoHandler
 from .types import (
     FEED_MAP,
@@ -43,19 +43,19 @@ from .types import (
     OHLCV_COLUMNS,
     SCHEMA_MAP,
     SCHEMA_TO_TIMEFRAME,
-    BentoFeed,
     RollType,
     Schema,
     SType,
+    TowerFeed,
 )
 
 __all__ = [
     # Main handler
     'BentoHandler',
     # Adapter (for advanced use)
-    'BentoAdapter',
+    'TowerAdapter',
     # Types
-    'BentoFeed',
+    'TowerFeed',
     'Schema',
     'SType',
     'RollType',

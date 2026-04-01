@@ -9,11 +9,11 @@ Gandalf walks slowly but sees far — like the moving average crossover.
 
 import pandas as pd
 
-from ..council_of_wizards import Strategy, ordain_istari
-from ..scrolls import Direction, StrategyConfig
+from ..council_of_wizards import Istari, ordain_istari
+from ..scrolls import Direction, Scroll
 
 
-class Gandalf(Strategy):
+class Gandalf(Istari):
     """SMA Crossover strategy.
 
     Technical name: SmaCross — Simple Moving Average crossover.
@@ -35,9 +35,9 @@ class Gandalf(Strategy):
         self.slow_window = int(slow_window)
         self.direction = direction
 
-    def config(self) -> StrategyConfig:
+    def config(self) -> Scroll:
         """Return strategy configuration from instance state."""
-        return StrategyConfig(
+        return Scroll(
             name='gandalf',
             params={'fast_window': self.fast_window, 'slow_window': self.slow_window},
             direction=self.direction,

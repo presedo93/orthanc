@@ -12,7 +12,7 @@ import pandas as pd
 import polars as pl
 
 from ..memory import (
-    TimeRange,
+    Gaze,
     find_cached_files,
     find_gaps,
     get_cache_dir,
@@ -28,8 +28,8 @@ from .types import (
     FEED_OHLCV,
     FEED_OPEN_INTEREST,
     FEED_TRADES,
-    DataFeed,
     Exchange,
+    ShireFeed,
 )
 
 
@@ -341,7 +341,7 @@ class CCXTHandler:
         timeframe: str | None,
         since: str | datetime | int,
         until: str | datetime | int | None,
-        config: DataFeed,
+        config: ShireFeed,
     ) -> pd.DataFrame:
         """Generic method to fetch any type of exchange data with caching.
 
@@ -360,7 +360,7 @@ class CCXTHandler:
         since_ms = parse_timestamp(since)
         until_ms = parse_timestamp(until) if until else self._exchange.milliseconds()
 
-        requested = TimeRange(since_ms, until_ms)
+        requested = Gaze(since_ms, until_ms)
         all_frames: list[pl.DataFrame] = []
 
         for symbol in symbol_list:
@@ -385,7 +385,11 @@ class CCXTHandler:
         return df
 
     def _get_symbol_data(
-        self, symbol: str, timeframe: str | None, requested: TimeRange, config: DataFeed
+        self,
+        symbol: str,
+        timeframe: str | None,
+        requested: Gaze,
+        config: ShireFeed,
     ) -> pl.DataFrame | None:
         """Fetch data for a single symbol with caching.
 
