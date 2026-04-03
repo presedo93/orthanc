@@ -58,13 +58,15 @@ def _(mo):
     mo.md("""
     # Regime Switcher Explorer
 
-    Decompose the full decision pipeline of the regime-based multi-strategy
-    switcher: **features → regime detection → weight computation → signal
-    combination → backtest**.
+    Decompose the full decision pipeline of the HMM-based multi-strategy
+    switcher: **features → HMM fit → posterior inference → weight
+    computation → signal combination → backtest**.
 
-    Each stage is inspectable so you can see exactly how the system allocates
-    across trend-following, mean-reversion, volatility-breakout, and defensive
-    strategies in response to changing market conditions.
+    A Gaussian Hidden Markov Model is trained on technical features to
+    discover three latent regimes (trending, mean-reverting, volatile).
+    Each stage is inspectable so you can see exactly how the system
+    allocates across trend-following, mean-reversion, volatility-breakout,
+    and defensive strategies in response to changing market conditions.
     """)
     return
 
@@ -112,7 +114,7 @@ def _(mo, os, palantir, since, sym, symbols, timeframes, trf, until):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
-    ## 1 · Regime Detection
+    ## 1 · Regime Detection (HMM)
     """)
     return
 
@@ -149,12 +151,64 @@ def _(
     )
     is_transition = detect_regime_transition(regime_probs)
     strategy_weights = compute_strategy_weights(regime_probs)
-    return _cfg, is_transition, regime_probs, strategy_weights
+    return (
+        _cfg,
+        is_transition,
+        regime_cfg,
+        regime_features,
+        regime_label_map,
+        regime_model,
+        regime_probs,
+        regime_scaler,
+        strategy_weights,
+    )
+
+
+@app.cell
+def _(mo, pd, regime_cfg, regime_features, regime_label_map, regime_model):
+    mo.md('### HMM Diagnostics')
+
+    # Log-likelihood of the fitted model
+    _clean = regime_features.dropna()
+    _score = regime_model.score(_clean.values)
+
+    # Label mapping
+    _label_rows = [
+        {'HMM State': k, 'Regime': v.value} for k, v in regime_label_map.items()
+    ]
+
+    # Emission means per state (what each regime "looks like")
+    _means_df = pd.DataFrame(
+        regime_model.means_,
+        columns=_clean.columns,
+        index=[regime_label_map[i].value for i in range(regime_cfg.n_regimes)],
+    ).round(4)
+
+    # Transition matrix
+    _trans_df = pd.DataFrame(
+        regime_model.transmat_,
+        columns=[regime_label_map[i].value for i in range(regime_cfg.n_regimes)],
+        index=[regime_label_map[i].value for i in range(regime_cfg.n_regimes)],
+    ).round(4)
+
+    mo.md(f"""
+    **Log-likelihood**: `{_score:,.2f}` · **States**: {regime_cfg.n_regimes} · **Covariance**: {regime_cfg.covariance_type}
+
+    #### State → Regime Mapping
+    """)
+    mo.ui.table(pd.DataFrame(_label_rows))
+
+    mo.md('#### Learned Transition Matrix')
+    mo.ui.table(_trans_df.reset_index().rename(columns={'index': 'from \\ to'}))
+
+    mo.md('#### Emission Means (feature centroids per regime)')
+    mo.ui.table(_means_df.reset_index().rename(columns={'index': 'regime'}))
+    return
 
 
 @app.cell
 def _(alt, mo, regime_probs):
-    mo.md('### Regime Probabilities (smoothed)')
+    mo.md('### Regime Probabilities (HMM posteriors)')
 
     _melt = regime_probs.reset_index().melt(
         id_vars='timestamp',
@@ -399,9 +453,13 @@ def _(mo):
 
 
 @app.cell
-def _(df, istari, mo, pd):
-    _strategy = istari.Saruman(switcher_config=_cfg)
-    _strategy.fit(df)
+def _(df, istari, mo, pd, regime_label_map, regime_model, regime_scaler):
+    _strategy = istari.Saruman(
+        switcher_config=_cfg,
+        regime_model=regime_model,
+        regime_scaler=regime_scaler,
+        regime_labels=regime_label_map,
+    )
 
     # Run each sub-strategy independently
     _sub_signals = {}
@@ -427,11 +485,15 @@ def _(df, istari, mo, pd):
 
 
 @app.cell
-def _(alt, df, istari, mo, pd):
+def _(alt, df, istari, mo, pd, regime_label_map, regime_model, regime_scaler):
     mo.md('### Entry Signal Timeline')
 
-    _strategy2 = istari.Saruman(switcher_config=_cfg)
-    _strategy2.fit(df)
+    _strategy2 = istari.Saruman(
+        switcher_config=_cfg,
+        regime_model=regime_model,
+        regime_scaler=regime_scaler,
+        regime_labels=regime_label_map,
+    )
     _rows = []
     for _key, _sub in _strategy2._strategies.items():
         _ent, _ = _sub.signals(df)
@@ -481,9 +543,13 @@ def _(mo):
 
 
 @app.cell
-def _(df, istari, mo, mordor):
-    strategy = istari.Saruman(switcher_config=_cfg)
-    strategy.fit(df)
+def _(df, istari, mo, mordor, regime_label_map, regime_model, regime_scaler):
+    strategy = istari.Saruman(
+        switcher_config=_cfg,
+        regime_model=regime_model,
+        regime_scaler=regime_scaler,
+        regime_labels=regime_label_map,
+    )
     firm_config = mordor.sauron_basic()
     execution_config = istari.ForgeConfig(init_cash=firm_config.account_size)
 
@@ -569,13 +635,13 @@ def _(mo):
 
 
 @app.cell
-def _(exec_result, firm_config, mo, mordor, schema, strategy, symbol):
+def _(exec_result, firm_config, mo, mordor, strategy, sym, trf):
     sim_result = mordor.cast_into_shadow(
         result=exec_result,
         firm_config=firm_config,
         strategy_name=strategy.config().name,
-        symbol=symbol.value,
-        timeframe=schema.value,
+        symbol=sym,
+        timeframe=trf,
     )
 
     _summary = mordor.sing_the_tale(sim_result)
