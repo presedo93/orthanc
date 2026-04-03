@@ -602,6 +602,17 @@ wheels = [
 ]
 
 [[package]]
+name = "hmmlearn"
+version = "0.3.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "scikit-learn" },
+    { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/bb/77/89cdfbfaa2beb51f8cc57f83f9b4f653ec3faa660ba2e2146cc84bfc8eb9/hmmlearn-0.3.3.tar.gz", hash = "sha256:1d3c5dc4c5257e0c238dc1fe5387700b8cb987eab808edb3e0c73829f1cc44ec", size = 78535, upload-time = "2024-10-31T09:04:20.99Z" }
+
+[[package]]
 name = "identify"
 version = "2.6.18"
 source = { registry = "https://pypi.org/simple" }
@@ -1131,6 +1142,7 @@ dependencies = [
     { name = "basedpyright" },
     { name = "ccxt" },
     { name = "databento" },
+    { name = "hmmlearn" },
     { name = "marimo" },
     { name = "motheme" },
     { name = "numpy" },
@@ -1153,6 +1165,7 @@ requires-dist = [
     { name = "basedpyright", specifier = ">=1.34.0" },
     { name = "ccxt", specifier = ">=4.5.22" },
     { name = "databento", specifier = ">=0.68.2" },
+    { name = "hmmlearn", specifier = ">=0.3.3" },
     { name = "marimo", specifier = ">=0.18.1" },
     { name = "motheme", specifier = ">=0.2.0" },
     { name = "numpy", specifier = ">=2.3.5" },

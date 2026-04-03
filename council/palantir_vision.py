@@ -34,7 +34,7 @@ def _():
         compute_volatility_scaling,
         detect_regime_probabilities,
         detect_regime_transition,
-        smooth_regime_probabilities,
+        fit_regime_model,
     )
 
     return (
@@ -44,12 +44,12 @@ def _():
         compute_strategy_weights,
         detect_regime_probabilities,
         detect_regime_transition,
+        fit_regime_model,
+        istari,
         mordor,
         os,
-        pd,
-        smooth_regime_probabilities,
-        istari,
         palantir,
+        pd,
     )
 
 
@@ -78,85 +78,34 @@ def _(mo):
 
 
 @app.cell
-def _(mo):
-    symbol = mo.ui.dropdown(
-        options=[
-            'MNQ.v.0',
-            'MES.v.0',
-            'M2K.v.0',
-        ],
-        value='MNQ.v.0',
-        label='Symbol',
-    )
-    schema = mo.ui.dropdown(
-        options=['ohlcv-1m', 'ohlcv-1h', 'ohlcv-1d'],
-        value='ohlcv-1h',
-        label='Schema',
-    )
+def _():
+    symbols = {'nasdaq': 'MNQ.v.0', 's&p500': 'MES.v.0', 'rusell2000': 'M2K.v.0'}
 
-    mo.hstack([symbol, schema], justify='start', gap=1)
-    return schema, symbol
+    timeframes = {'1m': 'ohlcv-1m', '1h': 'ohlcv-1h', '1d': 'ohlcv-1d'}
+
+    sym, trf = 'nasdaq', '1m'
+    since, until = '2020-01-01', '2026-01-01'
+    return since, sym, symbols, timeframes, trf, until
 
 
 @app.cell
-def _(mo):
-    entry_threshold = mo.ui.slider(
-        start=0.1,
-        stop=0.9,
-        step=0.05,
-        value=0.4,
-        label='Entry threshold',
-    )
-    exit_threshold = mo.ui.slider(
-        start=0.1,
-        stop=0.9,
-        step=0.05,
-        value=0.3,
-        label='Exit threshold',
-    )
-    trend_fast = mo.ui.slider(
-        start=5,
-        stop=30,
-        step=1,
-        value=10,
-        label='Trend fast window',
-    )
-    trend_slow = mo.ui.slider(
-        start=20,
-        stop=100,
-        step=5,
-        value=30,
-        label='Trend slow window',
-    )
-
-    mo.hstack(
-        [entry_threshold, exit_threshold, trend_fast, trend_slow],
-        justify='start',
-        gap=1,
-    )
+def _():
+    entry_threshold, exit_threshold = 0.4, 0.3
+    trend_fast, trend_slow = 10, 30
     return entry_threshold, exit_threshold, trend_fast, trend_slow
 
 
 @app.cell
-def _(mo, os, schema, symbol, palantir):
-    _handler = palantir.TowerKeeper(
-        api_key=os.environ['DATABENTO_API_KEY'],
-        dataset='GLBX.MDP3',
-    )
-    df = _handler.get_ohlcv(
-        symbols=symbol.value,
-        schema=schema.value,
-        since='2020-01-01',
-        until='2026-01-01',
-    )
+def _(mo, os, palantir, since, sym, symbols, timeframes, trf, until):
+    api_key = os.environ.get('DATABENTO_API_KEY')
+    _handler = palantir.TowerKeeper(api_key)
+
+    df = _handler.get_ohlcv(symbols[sym], timeframes[trf], since, until)
 
     if 'symbol' in df.columns:
         df = df.drop(columns=['symbol'])
 
-    mo.md(
-        f'Loaded **{len(df)}** bars of `{symbol.value}` '
-        f'`{schema.value}` (2020-01-01 → 2026-01-01)'
-    )
+    mo.md(f'Loaded **{len(df)}** bars of `{sym}` `{trf}` ({since} → {until})')
     return (df,)
 
 
@@ -177,26 +126,30 @@ def _(
     df,
     entry_threshold,
     exit_threshold,
-    smooth_regime_probabilities,
+    fit_regime_model,
     istari,
     trend_fast,
     trend_slow,
 ):
     _cfg = istari.SarumanConfig(
-        entry_threshold=entry_threshold.value,
-        exit_threshold=exit_threshold.value,
-        trend_fast_window=trend_fast.value,
-        trend_slow_window=trend_slow.value,
+        entry_threshold=entry_threshold,
+        exit_threshold=exit_threshold,
+        trend_fast_window=trend_fast,
+        trend_slow_window=trend_slow,
     )
     regime_cfg = _cfg.regime
 
     # Decompose the pipeline step by step
     regime_features = compute_regime_features(df, regime_cfg)
-    raw_probs = detect_regime_probabilities(regime_features, regime_cfg)
-    regime_probs = smooth_regime_probabilities(raw_probs, regime_cfg.regime_ema_span)
+    regime_model, regime_scaler, regime_label_map = fit_regime_model(
+        regime_features, regime_cfg
+    )
+    regime_probs = detect_regime_probabilities(
+        regime_features, regime_model, regime_scaler, regime_label_map
+    )
     is_transition = detect_regime_transition(regime_probs)
     strategy_weights = compute_strategy_weights(regime_probs)
-    return is_transition, regime_probs, strategy_weights
+    return _cfg, is_transition, regime_probs, strategy_weights
 
 
 @app.cell
@@ -210,11 +163,9 @@ def _(alt, mo, regime_probs):
     )
 
     _regime_colors = {
-        'trend_up': '#2ecc71',
-        'trend_down': '#e74c3c',
-        'sideways': '#95a5a6',
-        'high_volatility': '#f39c12',
-        'low_activity': '#3498db',
+        'trending': '#2ecc71',
+        'mean_reverting': '#95a5a6',
+        'volatile': '#f39c12',
     }
 
     _chart = (
@@ -250,11 +201,9 @@ def _(alt, mo, regime_probs):
     _dominant = regime_probs.idxmax(axis=1).rename('regime').reset_index()
 
     _regime_colors_d = {
-        'trend_up': '#2ecc71',
-        'trend_down': '#e74c3c',
-        'sideways': '#95a5a6',
-        'high_volatility': '#f39c12',
-        'low_activity': '#3498db',
+        'trending': '#2ecc71',
+        'mean_reverting': '#95a5a6',
+        'volatile': '#f39c12',
     }
 
     _dom_chart = (
@@ -406,11 +355,9 @@ def _(alt, df, is_transition, regime_probs):
     )
 
     _regime_colors_p = {
-        'trend_up': '#2ecc71',
-        'trend_down': '#e74c3c',
-        'sideways': '#95a5a6',
-        'high_volatility': '#f39c12',
-        'low_activity': '#3498db',
+        'trending': '#2ecc71',
+        'mean_reverting': '#95a5a6',
+        'volatile': '#f39c12',
     }
 
     _price_line = (
@@ -452,8 +399,9 @@ def _(mo):
 
 
 @app.cell
-def _(df, mo, pd, istari):
+def _(df, istari, mo, pd):
     _strategy = istari.Saruman(switcher_config=_cfg)
+    _strategy.fit(df)
 
     # Run each sub-strategy independently
     _sub_signals = {}
@@ -479,10 +427,11 @@ def _(df, mo, pd, istari):
 
 
 @app.cell
-def _(alt, df, mo, pd, istari):
+def _(alt, df, istari, mo, pd):
     mo.md('### Entry Signal Timeline')
 
     _strategy2 = istari.Saruman(switcher_config=_cfg)
+    _strategy2.fit(df)
     _rows = []
     for _key, _sub in _strategy2._strategies.items():
         _ent, _ = _sub.signals(df)
@@ -532,8 +481,9 @@ def _(mo):
 
 
 @app.cell
-def _(df, mordor, mo, istari):
+def _(df, istari, mo, mordor):
     strategy = istari.Saruman(switcher_config=_cfg)
+    strategy.fit(df)
     firm_config = mordor.sauron_basic()
     execution_config = istari.ForgeConfig(init_cash=firm_config.account_size)
 
@@ -619,7 +569,7 @@ def _(mo):
 
 
 @app.cell
-def _(exec_result, firm_config, mordor, mo, schema, strategy, symbol):
+def _(exec_result, firm_config, mo, mordor, schema, strategy, symbol):
     sim_result = mordor.cast_into_shadow(
         result=exec_result,
         firm_config=firm_config,

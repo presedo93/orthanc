@@ -63,11 +63,12 @@ class ForgeConfig(BaseModel):
 
 
 class RealmConfig(BaseModel):
-    """Technical name: RegimeConfig — configuration for market regime detection.
+    """Technical name: RegimeConfig — configuration for HMM-based market regime detection.
 
-    Controls the feature computation periods and thresholds used
-    by the heuristic regime detector. All thresholds produce
-    continuous [0,1] probabilities — no hard switches.
+    Controls the feature computation periods used to build the
+    observation vectors, and the HMM training parameters. The
+    model produces continuous [0,1] probabilities per regime
+    via forward-backward posterior inference — no hard switches.
     """
 
     # Feature computation periods
@@ -82,23 +83,15 @@ class RealmConfig(BaseModel):
     range_period: int = 10
     structure_period: int = 10
 
-    # Trend thresholds
-    adx_strong_trend: float = 30.0
-    adx_weak_trend: float = 15.0
-    ema_slope_threshold: float = 0.005
+    # HMM parameters
+    n_regimes: int = 3
+    covariance_type: str = 'full'
+    hmm_n_iter: int = 100
+    hmm_tol: float = 1e-4
+    hmm_n_fits: int = 5
+    transition_stickiness: float = 0.95
 
-    # Volatility thresholds
-    atr_ratio_high: float = 1.5
-    atr_ratio_low: float = 0.7
-    bollinger_width_high: float = 0.06
-    bollinger_width_low: float = 0.02
-
-    # Activity thresholds
-    volume_ratio_low: float = 0.5
-    range_compression_low: float = 0.5
-
-    # Smoothing
-    regime_ema_span: int = 10
+    # Transition handling
     transition_decay: float = 0.6
 
 
