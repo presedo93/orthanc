@@ -32,7 +32,7 @@
 - **Architecture**: Layered library (`data/` → `strats/` → `funds/`)
 - **Naming**: Descriptive technical names throughout
 - **Class Reference**: See `technical-domain.md` → "Class Reference" for full listing (31+ classes)
-- **Interface**: Marimo notebooks in `council/` (`regime_explorer.py`)
+- **Interface**: Marimo notebooks in `notes/` (`regime_explorer.py`)
 - **Data Handlers**: `CCXTHandler` (CCXT/crypto), `BentoHandler` (Databento/futures)
 - **Configs**: Pydantic BaseModel (e.g., `FirmRuleSet`, `StrategyConfig`, `ExecutionConfig`)
 - **Domain models**: Frozen dataclasses (e.g., `Trade`, `AccountState`, `SimulationResult`)

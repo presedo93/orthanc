@@ -40,7 +40,7 @@ orthanc/
 │   └── playbook/      # Concrete strategy implementations
 ├── funds/             # Prop firm layer — account simulation and rules
 ├── archives/          # Raw/cached market data (gitignored)
-├── council/           # Marimo notebooks (exploration interface)
+├── notes/             # Marimo notebooks (exploration interface)
 │   └── regime_explorer.py   # Regime switcher pipeline explorer
 └── main.py            # Entry point
 ```
@@ -150,7 +150,7 @@ def check_daily_loss(state: AccountState, rules: FirmRuleSet) -> FailureReason |
 | Data types | `data/ccxt/types.py`, `data/bento/types.py` | `DataFeed`, `BentoFeed` + `FEED_*` |
 | Data cache | `data/cache.py` | `TimeRange`, `CachedFile`, `CheckpointMetadata` |
 | Error handling | `data/errors.py` | `DataFetchError` — data fetch errors |
-| Notebooks | `council/regime_explorer.py` | Marimo exploration notebook |
+| Notebooks | `notes/regime_explorer.py` | Marimo exploration notebook |
 | Config | `pyproject.toml`, `.pre-commit-config.yaml` | Dependencies, tools, hooks |
 
 ## Class Reference (31 classes)
