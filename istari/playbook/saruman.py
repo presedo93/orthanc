@@ -286,7 +286,7 @@ def fit_regime_model(
             random_state=seed,
             init_params='smc',
             params='stmc',
-            implementation='scaling',
+            implementation='log',
         )
         # Seed with sticky transition matrix, let EM refine it
         model.transmat_ = transmat_init.copy()

@@ -2,8 +2,8 @@
 
 import marimo
 
-__generated_with = '0.21.1'
-app = marimo.App(width='medium')
+__generated_with = "0.21.1"
+app = marimo.App(width="medium")
 
 
 @app.cell
@@ -20,18 +20,15 @@ def _():
     import altair as alt
     import pandas as pd
 
+    alt.data_transformers.enable('vegafusion')
+
     import istari
     import mordor
     import palantir
     from istari.playbook.saruman import (
         REGIME_STRATEGY_MATRIX,
-        RegimeType,
-        apply_transition_scaling,
-        apply_weight_adjustments,
-        compute_performance_factors,
         compute_regime_features,
         compute_strategy_weights,
-        compute_volatility_scaling,
         detect_regime_probabilities,
         detect_regime_transition,
         fit_regime_model,
@@ -81,12 +78,12 @@ def _(mo):
 
 @app.cell
 def _():
-    symbols = {'nasdaq': 'MNQ.v.0', 's&p500': 'MES.v.0', 'rusell2000': 'M2K.v.0'}
+    symbols = {'nasdaq': 'MNQ.v.0', 's&p500': 'MES.v.0', 'russell2000': 'M2K.v.0'}
 
     timeframes = {'1m': 'ohlcv-1m', '1h': 'ohlcv-1h', '1d': 'ohlcv-1d'}
 
     sym, trf = 'nasdaq', '1m'
-    since, until = '2020-01-01', '2026-01-01'
+    since, until = '2026-01-01', '2026-01-24'
     return since, sym, symbols, timeframes, trf, until
 
 
@@ -98,17 +95,27 @@ def _():
 
 
 @app.cell
+def _():
+    regime_colors = {
+        'trending': '#2ecc71',
+        'mean_reverting': '#95a5a6',
+        'volatile': '#f39c12',
+    }
+    return (regime_colors,)
+
+
+@app.cell
 def _(mo, os, palantir, since, sym, symbols, timeframes, trf, until):
     api_key = os.environ.get('DATABENTO_API_KEY')
     _handler = palantir.TowerKeeper(api_key)
 
-    df = _handler.get_ohlcv(symbols[sym], timeframes[trf], since, until)
+    ohlcv = _handler.get_ohlcv(symbols[sym], timeframes[trf], since, until)
 
-    if 'symbol' in df.columns:
-        df = df.drop(columns=['symbol'])
+    if 'symbol' in ohlcv.columns:
+        ohlcv = ohlcv.drop(columns=['symbol'])
 
-    mo.md(f'Loaded **{len(df)}** bars of `{sym}` `{trf}` ({since} → {until})')
-    return (df,)
+    mo.md(f'Loaded **{len(ohlcv)}** bars of `{sym}` `{trf}` ({since} → {until})')
+    return (ohlcv,)
 
 
 @app.cell(hide_code=True)
@@ -125,11 +132,11 @@ def _(
     compute_strategy_weights,
     detect_regime_probabilities,
     detect_regime_transition,
-    df,
     entry_threshold,
     exit_threshold,
     fit_regime_model,
     istari,
+    ohlcv,
     trend_fast,
     trend_slow,
 ):
@@ -142,7 +149,7 @@ def _(
     regime_cfg = _cfg.regime
 
     # Decompose the pipeline step by step
-    regime_features = compute_regime_features(df, regime_cfg)
+    regime_features = compute_regime_features(ohlcv, regime_cfg)
     regime_model, regime_scaler, regime_label_map = fit_regime_model(
         regime_features, regime_cfg
     )
@@ -152,7 +159,6 @@ def _(
     is_transition = detect_regime_transition(regime_probs)
     strategy_weights = compute_strategy_weights(regime_probs)
     return (
-        _cfg,
         is_transition,
         regime_cfg,
         regime_features,
@@ -165,12 +171,18 @@ def _(
 
 
 @app.cell
-def _(mo, pd, regime_cfg, regime_features, regime_label_map, regime_model):
-    mo.md('### HMM Diagnostics')
-
+def _(
+    mo,
+    pd,
+    regime_cfg,
+    regime_features,
+    regime_label_map,
+    regime_model,
+    regime_scaler,
+):
     # Log-likelihood of the fitted model
     _clean = regime_features.dropna()
-    _score = regime_model.score(_clean.values)
+    _score = regime_model.score(regime_scaler.transform(_clean.values))
 
     # Label mapping
     _label_rows = [
@@ -191,36 +203,29 @@ def _(mo, pd, regime_cfg, regime_features, regime_label_map, regime_model):
         index=[regime_label_map[i].value for i in range(regime_cfg.n_regimes)],
     ).round(4)
 
-    mo.md(f"""
+    mo.vstack([
+        mo.md('### HMM Diagnostics'),
+        mo.md(f"""
     **Log-likelihood**: `{_score:,.2f}` · **States**: {regime_cfg.n_regimes} · **Covariance**: {regime_cfg.covariance_type}
 
     #### State → Regime Mapping
-    """)
-    mo.ui.table(pd.DataFrame(_label_rows))
-
-    mo.md('#### Learned Transition Matrix')
-    mo.ui.table(_trans_df.reset_index().rename(columns={'index': 'from \\ to'}))
-
-    mo.md('#### Emission Means (feature centroids per regime)')
-    mo.ui.table(_means_df.reset_index().rename(columns={'index': 'regime'}))
+        """),
+        mo.ui.table(pd.DataFrame(_label_rows)),
+        mo.md('#### Learned Transition Matrix'),
+        mo.ui.table(_trans_df.reset_index().rename(columns={'index': 'from \\ to'})),
+        mo.md('#### Emission Means (feature centroids per regime)'),
+        mo.ui.table(_means_df.reset_index().rename(columns={'index': 'regime'})),
+    ])
     return
 
 
 @app.cell
-def _(alt, mo, regime_probs):
-    mo.md('### Regime Probabilities (HMM posteriors)')
-
+def _(alt, mo, regime_colors, regime_probs):
     _melt = regime_probs.reset_index().melt(
         id_vars='timestamp',
         var_name='regime',
         value_name='probability',
     )
-
-    _regime_colors = {
-        'trending': '#2ecc71',
-        'mean_reverting': '#95a5a6',
-        'volatile': '#f39c12',
-    }
 
     _chart = (
         alt.Chart(_melt)
@@ -231,8 +236,8 @@ def _(alt, mo, regime_probs):
             color=alt.Color(
                 'regime:N',
                 scale=alt.Scale(
-                    domain=list(_regime_colors.keys()),
-                    range=list(_regime_colors.values()),
+                    domain=list(regime_colors.keys()),
+                    range=list(regime_colors.values()),
                 ),
                 title='Regime',
             ),
@@ -244,21 +249,17 @@ def _(alt, mo, regime_probs):
         )
         .properties(width=700, height=280, title='Regime Probability Distribution')
     )
-    _chart
+
+    mo.vstack([
+        mo.md('### Regime Probabilities (HMM posteriors)'),
+        _chart,
+    ])
     return
 
 
 @app.cell
-def _(alt, mo, regime_probs):
-    mo.md('### Dominant Regime')
-
+def _(alt, mo, regime_colors, regime_probs):
     _dominant = regime_probs.idxmax(axis=1).rename('regime').reset_index()
-
-    _regime_colors_d = {
-        'trending': '#2ecc71',
-        'mean_reverting': '#95a5a6',
-        'volatile': '#f39c12',
-    }
 
     _dom_chart = (
         alt.Chart(_dominant)
@@ -268,8 +269,8 @@ def _(alt, mo, regime_probs):
             color=alt.Color(
                 'regime:N',
                 scale=alt.Scale(
-                    domain=list(_regime_colors_d.keys()),
-                    range=list(_regime_colors_d.values()),
+                    domain=list(regime_colors.keys()),
+                    range=list(regime_colors.values()),
                 ),
                 title='Regime',
             ),
@@ -280,7 +281,10 @@ def _(alt, mo, regime_probs):
         )
         .properties(width=700, height=40, title='Dominant Regime Timeline')
     )
-    _dom_chart
+    mo.vstack([
+        mo.md('### Dominant Regime'),
+        _dom_chart,
+    ])
     return
 
 
@@ -294,8 +298,6 @@ def _(mo):
 
 @app.cell
 def _(alt, mo, strategy_weights):
-    mo.md('### Weight Evolution')
-
     _w_melt = strategy_weights.reset_index().melt(
         id_vars='timestamp',
         var_name='strategy',
@@ -331,14 +333,15 @@ def _(alt, mo, strategy_weights):
         )
         .properties(width=700, height=280, title='Strategy Weight Allocation')
     )
-    _w_chart
+    mo.vstack([
+        mo.md('### Weight Evolution'),
+        _w_chart,
+    ])
     return
 
 
 @app.cell
 def _(REGIME_STRATEGY_MATRIX, alt, mo):
-    mo.md('### Regime → Strategy Matrix')
-
     _matrix = (
         REGIME_STRATEGY_MATRIX.reset_index()
         .melt(
@@ -377,7 +380,10 @@ def _(REGIME_STRATEGY_MATRIX, alt, mo):
         )
     )
 
-    _heatmap + _text
+    mo.vstack([
+        mo.md('### Regime → Strategy Matrix'),
+        _heatmap + _text,
+    ])
     return
 
 
@@ -390,7 +396,7 @@ def _(mo):
 
 
 @app.cell
-def _(alt, df, is_transition, regime_probs):
+def _(alt, df, is_transition, regime_colors, regime_probs):
     _price = df[['close']].copy().reset_index()
 
     _dominant = regime_probs.idxmax(axis=1).rename('regime')
@@ -408,12 +414,6 @@ def _(alt, df, is_transition, regime_probs):
         how='left',
     )
 
-    _regime_colors_p = {
-        'trending': '#2ecc71',
-        'mean_reverting': '#95a5a6',
-        'volatile': '#f39c12',
-    }
-
     _price_line = (
         alt.Chart(_price)
         .mark_line(strokeWidth=1.5)
@@ -423,8 +423,8 @@ def _(alt, df, is_transition, regime_probs):
             color=alt.Color(
                 'regime:N',
                 scale=alt.Scale(
-                    domain=list(_regime_colors_p.keys()),
-                    range=list(_regime_colors_p.values()),
+                    domain=list(regime_colors.keys()),
+                    range=list(regime_colors.values()),
                 ),
                 title='Regime',
             ),
@@ -479,15 +479,15 @@ def _(df, istari, mo, pd, regime_label_map, regime_model, regime_scaler):
         })
     sub_signal_summary = pd.DataFrame(_signal_rows)
 
-    mo.md('### Signal Counts per Sub-Strategy')
-    mo.ui.table(sub_signal_summary)
+    mo.vstack([
+        mo.md('### Signal Counts per Sub-Strategy'),
+        mo.ui.table(sub_signal_summary),
+    ])
     return
 
 
 @app.cell
 def _(alt, df, istari, mo, pd, regime_label_map, regime_model, regime_scaler):
-    mo.md('### Entry Signal Timeline')
-
     _strategy2 = istari.Saruman(
         switcher_config=_cfg,
         regime_model=regime_model,
@@ -528,9 +528,15 @@ def _(alt, df, istari, mo, pd, regime_label_map, regime_model, regime_scaler):
             )
             .properties(width=700, height=150, title='Entry Signals by Sub-Strategy')
         )
-        _sig_chart
+        mo.vstack([
+            mo.md('### Entry Signal Timeline'),
+            _sig_chart,
+        ])
     else:
-        mo.md('_No entry signals._')
+        mo.vstack([
+            mo.md('### Entry Signal Timeline'),
+            mo.md('_No entry signals._'),
+        ])
     return
 
 
@@ -582,8 +588,6 @@ def _(df, istari, mo, mordor, regime_label_map, regime_model, regime_scaler):
 
 @app.cell
 def _(alt, exec_result, mo):
-    mo.md('### Equity Curve')
-
     _eq = exec_result.equity_curve.reset_index()
     _eq.columns = ['timestamp', 'equity']
 
@@ -600,14 +604,15 @@ def _(alt, exec_result, mo):
         )
         .properties(width=700, height=300, title='Equity Curve')
     )
-    _eq_chart
+    mo.vstack([
+        mo.md('### Equity Curve'),
+        _eq_chart,
+    ])
     return
 
 
 @app.cell
 def _(alt, exec_result, mo, pd):
-    mo.md('### Returns Distribution')
-
     _ret = pd.DataFrame({'return': exec_result.daily_returns.values})
 
     if not _ret.empty:
@@ -620,9 +625,15 @@ def _(alt, exec_result, mo, pd):
             )
             .properties(width=700, height=220, title='Daily Returns Distribution')
         )
-        _hist
+        mo.vstack([
+            mo.md('### Returns Distribution'),
+            _hist,
+        ])
     else:
-        mo.md('_No return data._')
+        mo.vstack([
+            mo.md('### Returns Distribution'),
+            mo.md('_No return data._'),
+        ])
     return
 
 
@@ -651,8 +662,6 @@ def _(exec_result, firm_config, mo, mordor, strategy, sym, trf):
 
 @app.cell
 def _(alt, mo, pd, sim_result):
-    mo.md('### Equity Curve (Sim)')
-
     _eq_sim = pd.DataFrame({
         'bar': range(len(sim_result.equity_curve)),
         'equity': sim_result.equity_curve,
@@ -668,16 +677,20 @@ def _(alt, mo, pd, sim_result):
             )
             .properties(width=700, height=300, title='Simulated Equity Curve')
         )
-        _chart
+        mo.vstack([
+            mo.md('### Equity Curve (Sim)'),
+            _chart,
+        ])
     else:
-        mo.md('_No equity data._')
+        mo.vstack([
+            mo.md('### Equity Curve (Sim)'),
+            mo.md('_No equity data._'),
+        ])
     return
 
 
 @app.cell
 def _(mo, pd, sim_result):
-    mo.md('### Daily Ledger')
-
     if sim_result.daily_ledger:
         _ledger_data = [
             {
@@ -696,9 +709,15 @@ def _(mo, pd, sim_result):
             for row in sim_result.daily_ledger
         ]
         _ledger_df = pd.DataFrame(_ledger_data)
-        mo.ui.table(_ledger_df)
+        mo.vstack([
+            mo.md('### Daily Ledger'),
+            mo.ui.table(_ledger_df),
+        ])
     else:
-        mo.md('_No daily ledger data._')
+        mo.vstack([
+            mo.md('### Daily Ledger'),
+            mo.md('_No daily ledger data._'),
+        ])
     return
 
 
@@ -722,5 +741,5 @@ def _(firm_config, mo):
     return
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run()
