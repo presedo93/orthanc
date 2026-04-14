@@ -1,5 +1,7 @@
 """Exchange-specific method caller for CCXT.
 
+Exchange-specific parameter routing.
+
 This module provides a clean way to call CCXT methods with exchange-specific
 parameter requirements. Different exchanges need different parameters and
 even different argument positions.

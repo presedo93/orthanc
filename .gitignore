@@ -6,5 +6,14 @@ dist/
 wheels/
 *.egg-info
 
+# Parquet files
+*.parquet
+
 # Virtual environments
 .venv
+
+# Environment variables
+.env
+
+# Marimorimo-generated files
+__marimo__/

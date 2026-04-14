@@ -77,7 +77,7 @@ class BentoHandler:
         self,
         api_key: str,
         dataset: str = 'GLBX.MDP3',
-        data_dir: Path | str = 'data',
+        data_dir: Path | str = 'archives',
     ) -> None:
         """Initialize the handler.
 
@@ -241,7 +241,7 @@ class BentoHandler:
         Returns:
             DataFrame with the requested data, or None if no data available.
         """
-        # Get cache directory: data/bento_ohlcv/GLBX.MDP3/mnq.v.0/1m/
+        # Get cache directory: archives/bento_ohlcv/GLBX.MDP3/mnq.v.0/1m/
         cache_dir = get_cache_dir(
             self._dir, config.name, self._dataset, symbol, timeframe
         )

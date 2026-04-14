@@ -1,4 +1,7 @@
-"""CCXT exchange wrapper for simplified data fetching."""
+"""CCXT exchange wrapper for simplified data fetching.
+
+High-level CCXT data handler with caching.
+"""
 
 from datetime import datetime
 from pathlib import Path
@@ -46,7 +49,7 @@ class CCXTHandler:
         ... )
     """
 
-    def __init__(self, exchange_id: str, data_dir: Path | str = 'data') -> None:
+    def __init__(self, exchange_id: str, data_dir: Path | str = 'archives') -> None:
         """Initialize the handler with an exchange.
 
         Args:
@@ -382,7 +385,11 @@ class CCXTHandler:
         return df
 
     def _get_symbol_data(
-        self, symbol: str, timeframe: str | None, requested: TimeRange, config: DataFeed
+        self,
+        symbol: str,
+        timeframe: str | None,
+        requested: TimeRange,
+        config: DataFeed,
     ) -> pl.DataFrame | None:
         """Fetch data for a single symbol with caching.
 

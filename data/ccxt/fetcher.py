@@ -1,4 +1,7 @@
-"""Generic data fetching with pagination support for different exchanges."""
+"""Generic data fetching with pagination support for different exchanges.
+
+Paginated exchange data fetching.
+"""
 
 from pathlib import Path
 from typing import Any

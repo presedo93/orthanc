@@ -22,7 +22,7 @@ Symbol Format: {SYMBOL}.{ROLL_TYPE}.{RANK}
 - RANK: 0 = front month, 1 = second month, etc.
 
 Examples:
-    >>> from tape import BentoHandler
+    >>> from data import BentoHandler
     >>> handler = BentoHandler(api_key="db-xxx", dataset="GLBX.MDP3")
     >>> df = handler.get_ohlcv(
     ...     symbols="MNQ.v.0",

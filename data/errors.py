@@ -1,4 +1,4 @@
-"""Error handling utilities for tape module.
+"""Data fetching error handling.
 
 This module provides decorators, utilities, and custom exceptions for handling
 data fetching errors gracefully with clean logging instead of verbose stack traces.

@@ -14,7 +14,6 @@ from .types import (
 
 __all__ = [
     'CCXTHandler',
-    'DataFeed',
     'Exchange',
     'FEED_FUNDING_RATE',
     'FEED_LS_RATIO',
@@ -22,4 +21,5 @@ __all__ = [
     'FEED_OHLCV',
     'FEED_OPEN_INTEREST',
     'FEED_TRADES',
+    'DataFeed',
 ]

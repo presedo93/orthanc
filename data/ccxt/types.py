@@ -1,4 +1,7 @@
-"""CCXT-specific type definitions."""
+"""CCXT-specific type definitions.
+
+Exchange types and data feed configs.
+"""
 
 from dataclasses import dataclass
 

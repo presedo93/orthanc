@@ -1,4 +1,7 @@
-"""Parquet cache management for OHLCV data."""
+"""Parquet cache management for OHLCV data.
+
+Parquet file caching with gap detection and merging.
+"""
 
 import json
 import re
